@@ -1,0 +1,74 @@
+/* DevExpress Tree Grid Custom Styles */
+
+/* Hide expand buttons from all cells except the tree column */
+.dx-datagrid-rowsview .dx-row .dx-cell:not(.dx-treelist-cell-tree-column) .dx-treelist-icon-container,
+.dx-datagrid-rowsview .dx-row .dx-cell:not(.dx-treelist-cell-tree-column) .dx-treelist-cell-expandButton,
+.dx-datagrid-rowsview .dx-row .dx-cell:not(.dx-treelist-cell-tree-column) .TableTreeColumn-expandButton {
+    display: none !important;
+}
+
+/* Ensure tree column has proper indentation and display */
+.dx-treelist-cell-tree-column {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.dx-treelist-cell-tree-column .dx-treelist-icon-container {
+    display: inline-block !important;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+/* Hide expand buttons from non-tree columns using class selector */
+.hide-expand-button .dx-treelist-icon-container,
+.hide-expand-button .dx-treelist-cell-expandButton,
+.hide-expand-button .TableTreeColumn-expandButton,
+.hide-expand-button .dx-icon-expand,
+.hide-expand-button .dx-icon-collapse {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Fix tree column spacing and layout */
+.dx-treelist .dx-treelist-cell-tree-column .dx-treelist-cell-content {
+    padding-left: 0;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+/* Ensure proper tree icon positioning */
+.dx-treelist .dx-treelist-icon-container {
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+/* Tree column content layout */
+.TableTreeColumn-expandButton {
+    margin-right: 8px !important;
+    flex-shrink: 0;
+}
+
+.TableTreeColumn-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+/* Hide any stray expand icons in Material-UI table cells */
+.MuiTableCell-root .dx-treelist-icon-container:not(.tree-column-icon),
+.MuiTableCell-root .dx-treelist-cell-expandButton:not(.tree-column-button),
+.MuiTableCell-root .TableTreeColumn-expandButton:not(.tree-column-button) {
+    display: none !important;
+}
+
+/* Ensure tree column dropdown doesn't interfere with expand button */
+.tree-column-dropdown {
+    flex: 1;
+    margin-left: 8px;
+}

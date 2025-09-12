@@ -18,10 +18,6 @@ import DataUsageIcon from '@material-ui/icons/DataUsage';
 import './App.css';
 import DataGrid from './components/DataGrid';
 
-// Import components (to be created later)
-// import Dashboard from './components/Dashboard';
-// import DataGrid from './components/DataGrid';
-
 const useStyles = makeStyles((theme) => ({
   root: {
     flexGrow: 1,
@@ -93,7 +89,7 @@ const WelcomePage = () => {
                   Manage and analyze your data with advanced grid functionality
                 </Typography>
                 <Box mt={2}>
-                  <Button variant="contained" color="secondary">
+                  <Button variant="contained" color="secondary" onClick={() => window.location.href = '/data'}>
                     Manage Data
                   </Button>
                 </Box>
@@ -122,8 +118,6 @@ const App = () => {
 
       <Switch>
         <Route exact path="/" component={WelcomePage} />
-        {/* Add more routes here as you develop components */}
-        {/* <Route path="/dashboard" component={Dashboard} /> */}
         <Route path="/data" component={DataGrid} />
       </Switch>
     </div>
