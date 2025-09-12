@@ -9,7 +9,6 @@ import {
   Box,
   Button,
   Grid,
-  Paper,
   Card,
   CardContent
 } from '@material-ui/core';
