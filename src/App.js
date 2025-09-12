@@ -16,6 +16,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import DashboardIcon from '@material-ui/icons/Dashboard';
 import DataUsageIcon from '@material-ui/icons/DataUsage';
 import './App.css';
+import DataGrid from './components/DataGrid';
 
 // Import components (to be created later)
 // import Dashboard from './components/Dashboard';
@@ -123,7 +124,7 @@ const App = () => {
         <Route exact path="/" component={WelcomePage} />
         {/* Add more routes here as you develop components */}
         {/* <Route path="/dashboard" component={Dashboard} /> */}
-        {/* <Route path="/data" component={DataGrid} /> */}
+        <Route path="/data" component={DataGrid} />
       </Switch>
     </div>
   );
