@@ -1,0 +1,40 @@
+/* App-specific styles */
+.App {
+  text-align: center;
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+/* Error message styling */
+.error-message {
+  color: #f44336;
+  background-color: #ffebee;
+  padding: 16px;
+  border-radius: 4px;
+  margin: 16px 0;
+}
+
+/* Success message styling */
+.success-message {
+  color: #4caf50;
+  background-color: #e8f5e8;
+  padding: 16px;
+  border-radius: 4px;
+  margin: 16px 0;
+}
