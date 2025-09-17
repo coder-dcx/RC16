@@ -1,10 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Checkbox, FormControl, FormControlLabel, InputLabel, MenuItem, Select, TextField } from '@material-ui/core';
+import { 
+    Checkbox, 
+    FormControl, 
+    FormControlLabel, 
+    InputLabel, 
+    MenuItem, 
+    Select, 
+    TextField,
+    Button,
+    Paper,
+    Typography,
+    Box
+} from '@material-ui/core';
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
 import CheckBoxIcon from '@material-ui/icons/CheckBox';
 import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
 import DoneIcon from '@material-ui/icons/Done';
 import ClearIcon from '@material-ui/icons/Clear';
+import AddIcon from '@material-ui/icons/Add';
+import SaveIcon from '@material-ui/icons/Save';
+import DeleteIcon from '@material-ui/icons/Delete';
 
 import './index.css';
 
@@ -226,8 +241,15 @@ function NestedIfGridV2({
     const generateFormula = (row) => {
         if (!row.ifChecked) {
             const paramDisplay = row.paramId ? `[${row.paramId}]` : '[PARAM]';
-            const operation = row.operation || '*';
             const standardMH = row.standardMH || 0;
+            
+            // If Standard MH/UOM is empty, null, or 0, show just Param ID
+            if (!standardMH || standardMH === 0) {
+                return paramDisplay;
+            }
+            
+            // Otherwise show full format: Param ID + Operation + Standard MH/UOM
+            const operation = row.operation || '*';
             return `${paramDisplay} ${operation} ${standardMH}`;
         } else {
             const leftVal = row.leftValue || 'LEFT';
@@ -295,6 +317,76 @@ function NestedIfGridV2({
                     />
                 );
         }
+    };
+
+    // Add new row to the grid
+    const addNewRow = () => {
+        const newRowId = `row_${Date.now()}`;
+        const newRow = createNewRow(newRowId);
+        setRows(prevRows => {
+            const updatedRows = [...prevRows, newRow];
+            if (onDataChange) onDataChange(updatedRows);
+            return updatedRows;
+        });
+    };
+
+    // Delete row from the grid
+    const deleteRow = (rowId) => {
+        setRows(prevRows => {
+            const updatedRows = removeRowRecursive(prevRows, rowId);
+            if (onDataChange) onDataChange(updatedRows);
+            return updatedRows;
+        });
+    };
+
+    // Recursive function to remove a row from the tree structure
+    const removeRowRecursive = (rowsList, rowId) => {
+        // Filter out the row with matching ID from the current level
+        const filteredRows = rowsList.filter(row => row.id !== rowId);
+        
+        // For remaining rows, check and clean their children
+        return filteredRows.map(row => {
+            const updatedRow = { ...row };
+            
+            // Check true child
+            if (updatedRow.children.trueChild?.id === rowId) {
+                updatedRow.children.trueChild = null;
+            } else if (updatedRow.children.trueChild) {
+                const updatedTrueChild = removeRowRecursive([updatedRow.children.trueChild], rowId);
+                updatedRow.children.trueChild = updatedTrueChild.length > 0 ? updatedTrueChild[0] : null;
+            }
+            
+            // Check false child
+            if (updatedRow.children.falseChild?.id === rowId) {
+                updatedRow.children.falseChild = null;
+            } else if (updatedRow.children.falseChild) {
+                const updatedFalseChild = removeRowRecursive([updatedRow.children.falseChild], rowId);
+                updatedRow.children.falseChild = updatedFalseChild.length > 0 ? updatedFalseChild[0] : null;
+            }
+            
+            // Update hasChildren status
+            updatedRow.hasChildren = !!(updatedRow.children.trueChild || updatedRow.children.falseChild);
+            
+            return updatedRow;
+        });
+    };
+
+    // Generate complete formula for all rows
+    const generateCompleteFormula = () => {
+        if (rows.length === 0) return '';
+        if (rows.length === 1) return generateFormula(rows[0]);
+        
+        // For multiple rows, join them with + operation
+        return rows.map(row => `(${generateFormula(row)})`).join(' + ');
+    };
+
+    // Save data to console
+    const saveData = () => {
+        console.log('=== NestedIfGridV2 Data Export ===');
+        console.log('Complete Formula:', generateCompleteFormula());
+        console.log('Rows Data:', JSON.stringify(rows, null, 2));
+        console.log('=====================================');
+        alert('Data saved to console! Check browser console for details.');
     };
 
     // Render single row
@@ -496,6 +588,22 @@ function NestedIfGridV2({
                     <span>{generateFormula(row)}</span>
                 </div>
 
+                {/* Delete Button - Only show for main rows, not for TRUE/FALSE child rows */}
+                {!isChild && (
+                    <div className='col-block w60'>
+                        <Button
+                            variant="outlined"
+                            color="secondary"
+                            size="small"
+                            startIcon={<DeleteIcon />}
+                            onClick={() => deleteRow(row.id)}
+                            style={{ minWidth: '40px' }}
+                        >
+                            Delete
+                        </Button>
+                    </div>
+                )}
+
             </div>
 
             {/* Recursive Child Rendering */}
@@ -509,9 +617,62 @@ function NestedIfGridV2({
     );
 
     return (
-        <div className='formula-build-form'>
-            {rows.map(row => renderRow(row))}
-        </div>
+        <>
+            {/* Control Panel */}
+            <Paper elevation={2} style={{ padding: '20px', marginBottom: '20px' }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
+                    <Typography variant="h5" component="h2">
+                        Nested IF Grid Builder
+                    </Typography>
+                    <Box>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<AddIcon />}
+                            onClick={addNewRow}
+                            style={{ marginRight: '10px' }}
+                        >
+                            Add Row
+                        </Button>
+                        <Button
+                            variant="contained"
+                            color="secondary"
+                            startIcon={<SaveIcon />}
+                            onClick={saveData}
+                        >
+                            Save Data
+                        </Button>
+                    </Box>
+                </Box>
+                
+                {/* Final Formula Preview */}
+                <Box>
+                    <Typography variant="h6" gutterBottom>
+                        Complete Formula Preview:
+                    </Typography>
+                    <Paper 
+                        elevation={1} 
+                        style={{ 
+                            padding: '15px', 
+                            backgroundColor: '#f5f5f5',
+                            fontFamily: 'monospace',
+                            fontSize: '14px',
+                            wordBreak: 'break-all',
+                            border: '1px solid #ddd'
+                        }}
+                    >
+                        <Typography variant="body1" component="code">
+                            {generateCompleteFormula() || 'No formula available'}
+                        </Typography>
+                    </Paper>
+                </Box>
+            </Paper>
+
+            {/* Formula Build Form */}
+            <div className='formula-build-form'>
+                {rows.map(row => renderRow(row))}
+            </div>
+        </>
     );
 }
 
