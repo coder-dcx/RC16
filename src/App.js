@@ -16,7 +16,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import DashboardIcon from '@material-ui/icons/Dashboard';
 import DataUsageIcon from '@material-ui/icons/DataUsage';
 import './App.css';
-import DataGrid from './components/DataGrid';
+import NestedIfGridV2 from './components/NestedIfGridV2';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -118,7 +118,7 @@ const App = () => {
 
       <Switch>
         <Route exact path="/" component={WelcomePage} />
-        <Route path="/data" component={DataGrid} />
+        <Route path="/data" component={NestedIfGridV2} />
       </Switch>
     </div>
   );
