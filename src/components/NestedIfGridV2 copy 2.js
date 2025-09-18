@@ -371,6 +371,7 @@ function NestedIfGridV2({
         const typeValue = row[typeField];
         const currentValue = row[valueField];
         const hasError = hasFieldError(row, valueField);
+        const errorMessage = getFieldError(row, valueField);
 
         switch (typeValue) {
             case 'PARAM ID':
@@ -403,6 +404,7 @@ function NestedIfGridV2({
                         value={currentValue}
                         onChange={(e) => updateRow(row.id, valueField, e.target.value)}
                         error={hasError}
+                        // helperText={errorMessage}
                     />
                 );
             case 'TEXT':
@@ -414,6 +416,7 @@ function NestedIfGridV2({
                         value={currentValue}
                         onChange={(e) => updateRow(row.id, valueField, e.target.value)}
                         error={hasError}
+                        // helperText={errorMessage}
                     />
                 );
             default:
@@ -424,6 +427,7 @@ function NestedIfGridV2({
                         value={currentValue}
                         disabled
                         error={hasError}
+                        // helperText={errorMessage}
                     />
                 );
         }
@@ -581,6 +585,11 @@ function NestedIfGridV2({
                                 </MenuItem>
                             ))}
                         </Select>
+                        {/* {hasFieldError(row, 'paramId') && (
+                            <div style={{ color: '#f44336', fontSize: '0.75rem', marginTop: '3px', marginLeft: '14px' }}>
+                                {getFieldError(row, 'paramId')}
+                            </div>
+                        )} */}
                     </FormControl>
                 </div>
 
@@ -604,6 +613,7 @@ function NestedIfGridV2({
                         variant="outlined"
                         size="small"
                         error={hasFieldError(row, 'moduleDesc')}
+                        // helperText={getFieldError(row, 'moduleDesc')}
                     />
                 </div>
 
@@ -628,6 +638,11 @@ function NestedIfGridV2({
                                 </MenuItem>
                             ))}
                         </Select>
+                        {hasFieldError(row, 'uom') && (
+                            <div style={{ color: '#f44336', fontSize: '0.75rem', marginTop: '3px', marginLeft: '14px' }}>
+                                {getFieldError(row, 'uom')}
+                            </div>
+                        )}
                     </FormControl>
                 </div>
 
@@ -650,6 +665,11 @@ function NestedIfGridV2({
                                 <MenuItem key={op} value={op}>{op}</MenuItem>
                             ))}
                         </Select>
+                        {hasFieldError(row, 'operation') && (
+                            <div style={{ color: '#f44336', fontSize: '0.75rem', marginTop: '3px', marginLeft: '14px' }}>
+                                {getFieldError(row, 'operation')}
+                            </div>
+                        )}
                     </FormControl>
                 </div>
 
@@ -664,6 +684,7 @@ function NestedIfGridV2({
                         size="small"
                         disabled={row.ifChecked}
                         error={hasFieldError(row, 'standardMH')}
+                        // helperText={getFieldError(row, 'standardMH')}
                     />
                 </div>
 
@@ -703,6 +724,11 @@ function NestedIfGridV2({
                                         <MenuItem key={type} value={type}>{type}</MenuItem>
                                     ))}
                                 </Select>
+                                {hasFieldError(row, 'leftType') && (
+                                    <div style={{ color: '#f44336', fontSize: '0.75rem', marginTop: '3px', marginLeft: '14px' }}>
+                                        {getFieldError(row, 'leftType')}
+                                    </div>
+                                )}
                             </FormControl>
                         </div>
 
@@ -729,6 +755,11 @@ function NestedIfGridV2({
                                         <MenuItem key={cond} value={cond}>{cond}</MenuItem>
                                     ))}
                                 </Select>
+                                {hasFieldError(row, 'condition') && (
+                                    <div style={{ color: '#f44336', fontSize: '0.75rem', marginTop: '3px', marginLeft: '14px' }}>
+                                        {getFieldError(row, 'condition')}
+                                    </div>
+                                )}
                             </FormControl>
                         </div>
 
@@ -750,6 +781,11 @@ function NestedIfGridV2({
                                         <MenuItem key={type} value={type}>{type}</MenuItem>
                                     ))}
                                 </Select>
+                                {hasFieldError(row, 'rightType') && (
+                                    <div style={{ color: '#f44336', fontSize: '0.75rem', marginTop: '3px', marginLeft: '14px' }}>
+                                        {getFieldError(row, 'rightType')}
+                                    </div>
+                                )}
                             </FormControl>
                         </div>
 
