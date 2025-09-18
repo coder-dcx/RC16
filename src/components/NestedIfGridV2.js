@@ -189,19 +189,55 @@ function NestedIfGridV2({
         return Object.keys(errors).length > 0;
     };
 
-    // Helper function to check if a specific field has validation error
-    const getFieldError = (row, fieldName) => {
-        let path;
-        if (row.parentId && row.isTrueBranch !== null) {
-            // This is a child row
-            path = `${row.parentId}.${row.isTrueBranch ? 'true' : 'false'}`;
-        } else {
+    // Helper function to build the complete validation path for any row (handles unlimited nesting)
+    const buildValidationPath = (row, allRows) => {
+        if (!row.parentId || row.isTrueBranch === null) {
             // This is a main row
-            path = row.id;
+            return row.id;
         }
         
+        // This is a child row - need to find the parent and build the full path
+        const parent = findRowRecursively(allRows, row.parentId);
+        if (!parent) {
+            return row.id; // Fallback if parent not found
+        }
+        
+        const parentPath = buildValidationPath(parent, allRows);
+        return `${parentPath}.${row.isTrueBranch ? 'true' : 'false'}`;
+    };
+
+    // Helper function to find a row by ID in the nested structure
+    const findRowRecursively = (rowsList, targetId) => {
+        for (let row of rowsList) {
+            if (row.id === targetId) {
+                return row;
+            }
+            
+            // Check children recursively
+            if (row.children.trueChild) {
+                const found = findRowRecursively([row.children.trueChild], targetId);
+                if (found) return found;
+            }
+            if (row.children.falseChild) {
+                const found = findRowRecursively([row.children.falseChild], targetId);
+                if (found) return found;
+            }
+        }
+        return null;
+    };
+
+    // Helper function to check if a specific field has validation error
+    const getFieldError = (row, fieldName) => {
+        const path = buildValidationPath(row, rows);
         const errorKey = `${path}.${fieldName}`;
-        return validationErrors[errorKey];
+        const error = validationErrors[errorKey];
+        
+        // Debug: Log path building for nested rows
+        if (row.parentId) {
+            console.log(`Checking nested row: ${row.id}, Built path: ${path}, Field: ${fieldName}, Error found: ${!!error}`);
+        }
+        
+        return error;
     };
 
     // Helper function to check if field has error (returns boolean)
@@ -498,6 +534,12 @@ function NestedIfGridV2({
         
         // Validate all rows
         const errors = validateAllRows();
+        
+        // Debug: Log validation paths for complex nested structures
+        console.log('=== VALIDATION DEBUG ===');
+        console.log('All validation errors found:', errors);
+        console.log('Error keys:', Object.keys(errors));
+        console.log('========================');
         
         if (hasValidationErrors(errors)) {
             // Show validation errors
