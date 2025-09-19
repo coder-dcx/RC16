@@ -34,15 +34,38 @@ function NestedIfGridV2({
     // Create default initial rows if none provided
     const createDefaultRows = () => [
         {
-            id: `row_${Date.now()}`, // Use timestamp for unique ID
+            id: 'row_1',
             parentId: null,
             isTrueBranch: null,
-            paramId: '',
-            paramDesc: '',
-            moduleDesc: '',
+            paramId: '000001',
+            paramDesc: 'Param Testing Description 1',
+            moduleDesc: 'Sample Module 1',
             uom: 'EA',
             operation: '*',
-            standardMH: 0,
+            standardMH: 10,
+            ifChecked: false,
+            isExpanded: false,
+            hasChildren: false,
+            leftType: 'PARAM ID',
+            leftValue: '',
+            condition: '==',
+            rightType: 'PARAM ID',
+            rightValue: '',
+            children: {
+                trueChild: null,
+                falseChild: null
+            }
+        },
+        {
+            id: 'row_2',
+            parentId: null,
+            isTrueBranch: null,
+            paramId: '000002',
+            paramDesc: 'Param Testing Description 2',
+            moduleDesc: 'Sample Module 2',
+            uom: 'HRS',
+            operation: '+',
+            standardMH: 5,
             ifChecked: false,
             isExpanded: false,
             hasChildren: false,
@@ -58,23 +81,7 @@ function NestedIfGridV2({
         }
     ];
 
-    // Initialize rows with proper handling of database data
-    const initializeRows = () => {
-        if (initialRows.length > 0) {
-            // Ensure all rows have required UI fields
-            return initialRows.map(row => ({
-                ...row,
-                // Ensure UI-only fields are properly set
-                isExpanded: row.isExpanded !== undefined ? row.isExpanded : (row.ifChecked || false),
-                hasChildren: row.hasChildren !== undefined ? row.hasChildren : (row.ifChecked || false),
-                // Ensure children structure exists
-                children: row.children || { trueChild: null, falseChild: null }
-            }));
-        }
-        return createDefaultRows();
-    };
-
-    const [rows, setRows] = useState(initializeRows());
+    const [rows, setRows] = useState(initialRows.length > 0 ? initialRows : createDefaultRows());
     
     // Validation state
     const [validationErrors, setValidationErrors] = useState({});
@@ -104,16 +111,7 @@ function NestedIfGridV2({
 
     useEffect(() => {
         if (initialRows.length > 0) {
-            // Inline the initialization logic to avoid dependency issues
-            const initializedRows = initialRows.map(row => ({
-                ...row,
-                // Ensure UI-only fields are properly set
-                isExpanded: row.isExpanded !== undefined ? row.isExpanded : (row.ifChecked || false),
-                hasChildren: row.hasChildren !== undefined ? row.hasChildren : (row.ifChecked || false),
-                // Ensure children structure exists
-                children: row.children || { trueChild: null, falseChild: null }
-            }));
-            setRows(initializedRows);
+            setRows(initialRows);
         }
     }, [initialRows]);
 

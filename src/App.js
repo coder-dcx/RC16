@@ -17,6 +17,7 @@ import DashboardIcon from '@material-ui/icons/Dashboard';
 import DataUsageIcon from '@material-ui/icons/DataUsage';
 import './App.css';
 import NestedIfGridV2 from './components/NestedIfGridV2';
+import DatabaseExampleUsage from './components/DatabaseExampleUsage';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -83,14 +84,33 @@ const WelcomePage = () => {
               <CardContent>
                 <DataUsageIcon className={classes.cardIcon} />
                 <Typography variant="h5" component="h2" gutterBottom>
-                  Data Management
+                  Formula Builder
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
-                  Manage and analyze your data with advanced grid functionality
+                  Create nested IF conditions with advanced validation
                 </Typography>
                 <Box mt={2}>
                   <Button variant="contained" color="secondary" onClick={() => window.location.href = '/data'}>
-                    Manage Data
+                    Basic Component
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Card className={classes.card}>
+              <CardContent>
+                <DataUsageIcon className={classes.cardIcon} />
+                <Typography variant="h5" component="h2" gutterBottom>
+                  Database Integration
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Test component with database integration (40+ rows, ID conversion, tree structure)
+                </Typography>
+                <Box mt={2}>
+                  <Button variant="contained" color="primary" onClick={() => window.location.href = '/database'}>
+                    Database Example
                   </Button>
                 </Box>
               </CardContent>
@@ -119,6 +139,7 @@ const App = () => {
       <Switch>
         <Route exact path="/" component={WelcomePage} />
         <Route path="/data" component={NestedIfGridV2} />
+        <Route path="/database" component={DatabaseExampleUsage} />
       </Switch>
     </div>
   );
