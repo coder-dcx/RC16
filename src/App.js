@@ -18,6 +18,8 @@ import DataUsageIcon from '@material-ui/icons/DataUsage';
 import './App.css';
 import NestedIfGridV2 from './components/NestedIfGridV2';
 import DatabaseExampleUsage from './components/DatabaseExampleUsage';
+import IFAndLookup from './components/IFAndLookup';
+import EnhancedExampleUsage from './components/EnhancedExampleUsage';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -60,7 +62,7 @@ const WelcomePage = () => {
         </Typography>
 
         <Grid container spacing={4} className={classes.content}>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={3}>
             <Card className={classes.card}>
               <CardContent>
                 <DashboardIcon className={classes.cardIcon} />
@@ -79,7 +81,7 @@ const WelcomePage = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={3}>
             <Card className={classes.card}>
               <CardContent>
                 <DataUsageIcon className={classes.cardIcon} />
@@ -98,7 +100,7 @@ const WelcomePage = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={3}>
             <Card className={classes.card}>
               <CardContent>
                 <DataUsageIcon className={classes.cardIcon} />
@@ -111,6 +113,44 @@ const WelcomePage = () => {
                 <Box mt={2}>
                   <Button variant="contained" color="primary" onClick={() => window.location.href = '/database'}>
                     Database Example
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Card className={classes.card}>
+              <CardContent>
+                <DataUsageIcon className={classes.cardIcon} />
+                <Typography variant="h5" component="h2" gutterBottom>
+                  Enhanced Builder
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Advanced builder with multiple rows under TRUE/FALSE branches
+                </Typography>
+                <Box mt={2}>
+                  <Button variant="contained" style={{ backgroundColor: '#ff9800', color: 'white' }} onClick={() => window.location.href = '/enhanced'}>
+                    Enhanced Demo
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Card className={classes.card}>
+              <CardContent>
+                <DataUsageIcon className={classes.cardIcon} />
+                <Typography variant="h5" component="h2" gutterBottom>
+                  🚀 Complete Enhanced Demo
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Full demonstration with sample data showing multiple children, nested IFs, and complex formulas
+                </Typography>
+                <Box mt={2}>
+                  <Button variant="contained" style={{ backgroundColor: '#4caf50', color: 'white' }} onClick={() => window.location.href = '/enhanced-demo'}>
+                    🎉 Full Enhanced Demo
                   </Button>
                 </Box>
               </CardContent>
@@ -140,6 +180,8 @@ const App = () => {
         <Route exact path="/" component={WelcomePage} />
         <Route path="/data" component={NestedIfGridV2} />
         <Route path="/database" component={DatabaseExampleUsage} />
+        <Route path="/enhanced" component={IFAndLookup} />
+        <Route path="/enhanced-demo" component={EnhancedExampleUsage} />
       </Switch>
     </div>
   );
