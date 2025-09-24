@@ -46,7 +46,7 @@ function FeaturesV1({
             moduleDesc: '',
             uom: 'EA',
             operation: '*',
-            standardMH: 0,
+            standardMH: '',
             conditionType: 'None', // Enhanced: Use dropdown instead of checkbox
             ifChecked: false, // Keep for backward compatibility
             isExpanded: false,
@@ -71,6 +71,8 @@ function FeaturesV1({
                 ...row,
                 // Enhanced: Migrate from ifChecked to conditionType
                 conditionType: row.conditionType || (row.ifChecked ? 'IF' : 'None'),
+                // Convert standardMH to string for consistency
+                standardMH: String(row.standardMH || ''),
                 // Ensure UI-only fields are properly set
                 isExpanded: row.isExpanded !== undefined ? row.isExpanded : (row.ifChecked || false),
                 hasChildren: row.hasChildren !== undefined ? row.hasChildren : (row.ifChecked || false),
@@ -156,8 +158,14 @@ function FeaturesV1({
             if (!row.operation || row.operation.trim() === '') {
                 errors[`${rowPath}.operation`] = 'Operation is required';
             }
-            if (row.standardMH === null || row.standardMH === undefined || row.standardMH < 0) {
-                errors[`${rowPath}.standardMH`] = 'Standard MH/UOM must be a positive number';
+            if (row.standardMH === null || row.standardMH === undefined || row.standardMH === '') {
+                errors[`${rowPath}.standardMH`] = 'Standard MH/UOM is required';
+            } else {
+                // Validate that it only contains allowed mathematical characters
+                const mathRegex = /^[0-9+\-*/.()]+$/;
+                if (!mathRegex.test(row.standardMH)) {
+                    errors[`${rowPath}.standardMH`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
+                }
             }
         } else {
             // If condition type is IF or IF-ELSE, validate conditional fields
@@ -279,7 +287,7 @@ function FeaturesV1({
         moduleDesc: '',
         uom: 'EA',
         operation: '*',
-        standardMH: 0,
+        standardMH: '',
         conditionType: 'None', // Enhanced: Use dropdown instead of checkbox
         ifChecked: false, // Keep for backward compatibility
         isExpanded: false,
@@ -514,10 +522,11 @@ function FeaturesV1({
     const generateFormula = (row) => {
         if (row.conditionType === 'None') {
             const paramDisplay = row.paramId ? `[${row.paramId}]` : '[PARAM]';
-            const standardMH = row.standardMH || 0;
+            // Convert to string and handle both string and number types
+            const standardMH = String(row.standardMH || '');
             
-            // If Standard MH/UOM is empty, null, or 0, show just Param ID
-            if (!standardMH || standardMH === 0) {
+            // If Standard MH/UOM is empty, show just Param ID
+            if (!standardMH || standardMH.trim() === '' || standardMH === '0') {
                 return paramDisplay;
             }
             
@@ -978,17 +987,25 @@ function FeaturesV1({
                     </FormControl>
                 </div>
 
-                {/* Standard MH/UOM - Disabled when IF checked */}
+                {/* Standard MH/UOM - String input with math validation */}
                 <div className='col-block'>
                     <TextField
                         label="Standard MH/UOM"
-                        type="number"
-                        value={row.standardMH}
-                        onChange={(e) => updateRow(row.id, 'standardMH', parseFloat(e.target.value) || 0)}
+                        type="text"
+                        value={String(row.standardMH || '')}
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            // Only allow numbers, +, -, *, /, ., (, )
+                            const mathRegex = /^[0-9+\-*/.()]*$/;
+                            if (mathRegex.test(value)) {
+                                updateRow(row.id, 'standardMH', value);
+                            }
+                        }}
                         variant="outlined"
                         size="small"
                         disabled={row.conditionType !== 'None'}
                         error={hasFieldError(row, 'standardMH')}
+                        placeholder="e.g. 10, (2+3)*4, 15.5"
                     />
                 </div>
 
