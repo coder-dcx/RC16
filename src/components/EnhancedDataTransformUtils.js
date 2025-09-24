@@ -59,7 +59,10 @@ export const dbRowToComponentRow = (dbRow) => {
         uom: dbRow.uom || 'EA',
         operation: dbRow.operation || '*',
         standardMH: dbRow.standardMH || 0,
-        ifChecked: dbRow.ifChecked || false,
+        
+        // Enhanced: Support new conditionType field (FeaturesV1)
+        conditionType: dbRow.conditionType || (dbRow.ifChecked ? 'IF-ELSE' : 'None'), // Migration support
+        ifChecked: dbRow.ifChecked || false, // Keep for backward compatibility
         
         // Conditional fields
         leftType: dbRow.leftType || 'PARAM ID',
@@ -69,8 +72,8 @@ export const dbRowToComponentRow = (dbRow) => {
         rightValue: dbRow.rightValue || '',
         
         // UI-only fields (derived, not from DB)
-        isExpanded: dbRow.ifChecked || false,
-        hasChildren: dbRow.ifChecked || false,
+        isExpanded: (dbRow.conditionType && dbRow.conditionType !== 'None') || dbRow.ifChecked || false,
+        hasChildren: (dbRow.conditionType && dbRow.conditionType !== 'None') || dbRow.ifChecked || false,
         children: {
             trueChildren: [], // Enhanced: array instead of single child
             falseChildren: [] // Enhanced: array instead of single child
@@ -97,7 +100,11 @@ export const componentRowToDbRow = (componentRow) => {
         uom: componentRow.uom,
         operation: componentRow.operation,
         standardMH: componentRow.standardMH,
-        ifChecked: componentRow.ifChecked,
+        
+        // Enhanced: Support new conditionType field (FeaturesV1)
+        conditionType: componentRow.conditionType || 'None', // New field for FeaturesV1
+        ifChecked: componentRow.ifChecked || (componentRow.conditionType && componentRow.conditionType !== 'None'), // Migration support
+        
         leftType: componentRow.leftType,
         leftValue: componentRow.leftValue,
         condition: componentRow.condition,

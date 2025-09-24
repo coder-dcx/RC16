@@ -20,6 +20,7 @@ import NestedIfGridV2 from './components/NestedIfGridV2';
 import DatabaseExampleUsage from './components/DatabaseExampleUsage';
 import IFAndLookup from './components/IFAndLookup';
 import EnhancedExampleUsage from './components/EnhancedExampleUsage';
+import FeaturesV1Example from './components/FeaturesV1Example';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -124,6 +125,25 @@ const WelcomePage = () => {
               <CardContent>
                 <DataUsageIcon className={classes.cardIcon} />
                 <Typography variant="h5" component="h2" gutterBottom>
+                  🎯 FeaturesV1
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Enhanced with Condition Type dropdown: None | IF | IF-ELSE
+                </Typography>
+                <Box mt={2}>
+                  <Button variant="contained" style={{ backgroundColor: '#9c27b0', color: 'white' }} onClick={() => window.location.href = '/featuresv1'}>
+                    FeaturesV1 Demo
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Card className={classes.card}>
+              <CardContent>
+                <DataUsageIcon className={classes.cardIcon} />
+                <Typography variant="h5" component="h2" gutterBottom>
                   Enhanced Builder
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
@@ -182,6 +202,7 @@ const App = () => {
         <Route path="/database" component={DatabaseExampleUsage} />
         <Route path="/enhanced" component={IFAndLookup} />
         <Route path="/enhanced-demo" component={EnhancedExampleUsage} />
+        <Route path="/featuresv1" component={FeaturesV1Example} />
       </Switch>
     </div>
   );
