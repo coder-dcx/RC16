@@ -14,7 +14,7 @@ import {
     Tooltip,
     Divider
 } from '@material-ui/core';
-import { Alert } from '@material-ui/lab';
+import { Alert, Autocomplete } from '@material-ui/lab';
 import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
 import DoneIcon from '@material-ui/icons/Done';
 import ClearIcon from '@material-ui/icons/Clear';
@@ -598,24 +598,37 @@ function FeaturesV1({
         switch (typeValue) {
             case 'PARAM ID':
                 return (
-                    <FormControl 
-                        variant="outlined" 
+                    <Autocomplete
+                        value={finalParamOptions.find(option => option.value === currentValue) || null}
+                        onChange={(event, newValue) => {
+                            updateRow(row.id, valueField, newValue ? newValue.value : '');
+                        }}
+                        options={finalParamOptions}
+                        getOptionLabel={(option) => option.label || ''}
+                        getOptionSelected={(option, value) => option.value === value.value}
                         size="small"
-                        error={hasError}
-                    >
-                        <Select
-                            value={currentValue}
-                            onChange={(e) => updateRow(row.id, valueField, e.target.value)}
-                            error={hasError}
-                        >
-                            <MenuItem value=""><em>None</em></MenuItem>
-                            {finalParamOptions.map(option => (
-                                <MenuItem key={option.value} value={option.value}>
-                                    {option.label}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                variant="outlined"
+                                error={hasError}
+                                placeholder="Search Param ID..."
+                            />
+                        )}
+                        renderOption={(option) => (
+                            <div>
+                                <strong>{option.label}</strong>
+                                {option.description && (
+                                    <div style={{ fontSize: '0.8em', color: '#666' }}>
+                                        {option.description}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        noOptionsText="No matching Param ID found"
+                        clearOnEscape
+                        openOnFocus
+                    />
                 );
             case 'NUMBER':
                 return (
@@ -920,28 +933,40 @@ function FeaturesV1({
                     </div>
                 )}
 
-                {/* Param ID */}
+                {/* Param ID - Searchable */}
                 <div className='col-block'>
-                    <FormControl 
-                        variant="outlined" 
+                    <Autocomplete
+                        value={finalParamOptions.find(option => option.value === row.paramId) || null}
+                        onChange={(event, newValue) => {
+                            updateRow(row.id, 'paramId', newValue ? newValue.value : '');
+                        }}
+                        options={finalParamOptions}
+                        getOptionLabel={(option) => option.label || ''}
+                        getOptionSelected={(option, value) => option.value === value.value}
                         size="small"
-                        error={hasFieldError(row, 'paramId')}
-                    >
-                        <InputLabel error={hasFieldError(row, 'paramId')}>Param ID</InputLabel>
-                        <Select
-                            value={row.paramId}
-                            onChange={(e) => updateRow(row.id, 'paramId', e.target.value)}
-                            label="Param ID"
-                            error={hasFieldError(row, 'paramId')}
-                        >
-                            <MenuItem value=""><em>None</em></MenuItem>
-                            {finalParamOptions.map(option => (
-                                <MenuItem key={option.value} value={option.value}>
-                                    {option.label}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="Param ID"
+                                variant="outlined"
+                                error={hasFieldError(row, 'paramId')}
+                                placeholder="Search Param ID..."
+                            />
+                        )}
+                        renderOption={(option) => (
+                            <div>
+                                <strong>{option.label}</strong>
+                                {option.description && (
+                                    <div style={{ fontSize: '0.8em', color: '#666' }}>
+                                        {option.description}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        noOptionsText="No matching Param ID found"
+                        clearOnEscape
+                        openOnFocus
+                    />
                 </div>
 
                 {/* Param Description */}
@@ -955,50 +980,64 @@ function FeaturesV1({
                     />
                 </div>
 
-                {/* UOM - Disabled when IF checked */}
+                {/* UOM - Searchable, Disabled when IF checked */}
                 <div className='col-block'>
-                    <FormControl 
-                        variant="outlined" 
+                    <Autocomplete
+                        value={finalUomOptions.find(option => option.value === row.uom) || null}
+                        onChange={(event, newValue) => {
+                            updateRow(row.id, 'uom', newValue ? newValue.value : '');
+                        }}
+                        options={finalUomOptions}
+                        getOptionLabel={(option) => option.label || ''}
+                        getOptionSelected={(option, value) => option.value === value.value}
                         size="small"
-                        error={hasFieldError(row, 'uom')}
-                    >
-                        <InputLabel error={hasFieldError(row, 'uom')}>UOM</InputLabel>
-                        <Select
-                            value={row.uom}
-                            onChange={(e) => updateRow(row.id, 'uom', e.target.value)}
-                            label="UOM"
-                            disabled={row.conditionType !== 'None'}
-                            error={hasFieldError(row, 'uom')}
-                        >
-                            {finalUomOptions.map(option => (
-                                <MenuItem key={option.value} value={option.value}>
-                                    {option.label}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                        disabled={row.conditionType !== 'None'}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="UOM"
+                                variant="outlined"
+                                error={hasFieldError(row, 'uom')}
+                                placeholder="Search UOM..."
+                            />
+                        )}
+                        noOptionsText="No matching UOM found"
+                        clearOnEscape
+                        openOnFocus
+                    />
                 </div>
 
-                {/* Operation - Disabled when IF checked */}
+                {/* Operation - Searchable, Disabled when IF checked */}
                 <div className='col-block'>
-                    <FormControl 
-                        variant="outlined" 
+                    <Autocomplete
+                        value={operationOptions.find(op => op === row.operation) || null}
+                        onChange={(event, newValue) => {
+                            updateRow(row.id, 'operation', newValue || '');
+                        }}
+                        options={operationOptions}
+                        getOptionLabel={(option) => option}
                         size="small"
-                        error={hasFieldError(row, 'operation')}
-                    >
-                        <InputLabel error={hasFieldError(row, 'operation')}>Operation</InputLabel>
-                        <Select
-                            value={row.operation}
-                            onChange={(e) => updateRow(row.id, 'operation', e.target.value)}
-                            label="Operation"
-                            disabled={row.conditionType !== 'None'}
-                            error={hasFieldError(row, 'operation')}
-                        >
-                            {operationOptions.map(op => (
-                                <MenuItem key={op} value={op}>{op}</MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                        disabled={row.conditionType !== 'None'}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="Operation"
+                                variant="outlined"
+                                error={hasFieldError(row, 'operation')}
+                                placeholder="Search Operation..."
+                            />
+                        )}
+                        renderOption={(option) => (
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ fontWeight: 'bold', marginRight: '8px' }}>{option}</span>
+                                {option === 'Number' && <span style={{ color: '#666', fontSize: '0.8em' }}>(Numeric values)</span>}
+                                {option === 'String' && <span style={{ color: '#666', fontSize: '0.8em' }}>(Text values)</span>}
+                            </div>
+                        )}
+                        noOptionsText="No matching operation found"
+                        clearOnEscape
+                        openOnFocus
+                    />
                 </div>
 
                 {/* Standard MH/UOM - Dynamic validation based on operation */}
