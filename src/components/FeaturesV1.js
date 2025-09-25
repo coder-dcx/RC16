@@ -110,7 +110,7 @@ function FeaturesV1({
     ];
 
     const operationOptions = ['+', '-', '*', '/', 'Number', 'String'];
-    const conditionOptions = ['==', '>', '<', '<>'];
+    const conditionOptions = ['=', '>', '<', '<>'];
     const typeOptions = ['PARAM ID', 'NUMBER', 'TEXT'];
 
     const finalParamOptions = paramIdOptions.length > 0 ? paramIdOptions : defaultParamOptions;
@@ -560,9 +560,24 @@ function FeaturesV1({
                 return `${paramDisplay} ${operation} ${standardMH}`;
             }
         } else {
-            const leftVal = row.leftValue || 'LEFT';
-            const condition = row.condition || '==';
-            const rightVal = row.rightValue || 'RIGHT';
+            // Helper function to format values based on type
+            const formatValueForFormula = (value, type) => {
+                if (!value) return type === 'PARAM ID' ? '[PARAM]' : type === 'TEXT' ? "'TEXT'" : 'VALUE';
+                
+                switch (type) {
+                    case 'PARAM ID':
+                        return `[${value}]`;
+                    case 'TEXT':
+                        return `'${value}'`;
+                    case 'NUMBER':
+                    default:
+                        return value;
+                }
+            };
+
+            const leftVal = formatValueForFormula(row.leftValue, row.leftType);
+            const condition = row.condition || '=';
+            const rightVal = formatValueForFormula(row.rightValue, row.rightType);
             
             // Handle multiple children in TRUE and FALSE branches
             const generateChildrenFormula = (children) => {
