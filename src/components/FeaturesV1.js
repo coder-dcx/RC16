@@ -109,7 +109,7 @@ function FeaturesV1({
         { value: 'HRS', label: 'HRS' }
     ];
 
-    const operationOptions = ['+', '-', '*', '/'];
+    const operationOptions = ['+', '-', '*', '/', 'Number', 'String'];
     const conditionOptions = ['==', '>', '<', '<>'];
     const typeOptions = ['PARAM ID', 'NUMBER', 'TEXT'];
 
@@ -145,9 +145,9 @@ function FeaturesV1({
             errors[`${rowPath}.paramId`] = 'Param ID is required';
         }
         
-        // Validate Module Description
+        // Validate Comment
         if (!row.moduleDesc || row.moduleDesc.trim() === '') {
-            errors[`${rowPath}.moduleDesc`] = 'Module Description is required';
+            errors[`${rowPath}.moduleDesc`] = 'Comment is required';
         }
         
         // Enhanced: Check condition type instead of ifChecked
@@ -161,10 +161,29 @@ function FeaturesV1({
             if (row.standardMH === null || row.standardMH === undefined || row.standardMH === '') {
                 errors[`${rowPath}.standardMH`] = 'Standard MH/UOM is required';
             } else {
-                // Validate that it only contains allowed mathematical characters
-                const mathRegex = /^[0-9+\-*/.()]+$/;
-                if (!mathRegex.test(row.standardMH)) {
-                    errors[`${rowPath}.standardMH`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
+                // Enhanced validation based on operation type
+                const operation = row.operation;
+                if (operation === 'Number') {
+                    // Validate mathematical characters
+                    const mathRegex = /^[0-9+\-*/.()]+$/;
+                    if (!mathRegex.test(row.standardMH)) {
+                        errors[`${rowPath}.standardMH`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
+                    }
+                } else if (operation === 'String') {
+                    // Validate string characters (A-Z, a-z, _, -, single space)
+                    const stringRegex = /^[A-Za-z_\- ]+$/;
+                    const hasMultipleSpaces = /\s{2,}/.test(row.standardMH);
+                    if (!stringRegex.test(row.standardMH)) {
+                        errors[`${rowPath}.standardMH`] = 'Standard MH/UOM must contain only letters, underscore, dash, and single spaces';
+                    } else if (hasMultipleSpaces) {
+                        errors[`${rowPath}.standardMH`] = 'Standard MH/UOM cannot contain multiple consecutive spaces';
+                    }
+                } else {
+                    // For +, -, *, / operations - validate mathematical characters
+                    const mathRegex = /^[0-9+\-*/.()]+$/;
+                    if (!mathRegex.test(row.standardMH)) {
+                        errors[`${rowPath}.standardMH`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
+                    }
                 }
             }
         } else {
@@ -524,15 +543,22 @@ function FeaturesV1({
             const paramDisplay = row.paramId ? `[${row.paramId}]` : '[PARAM]';
             // Convert to string and handle both string and number types
             const standardMH = String(row.standardMH || '');
-            
-            // If Standard MH/UOM is empty, show just Param ID
-            if (!standardMH || standardMH.trim() === '' || standardMH === '0') {
-                return paramDisplay;
-            }
-            
-            // Otherwise show full format: Param ID + Operation + Standard MH/UOM
             const operation = row.operation || '*';
-            return `${paramDisplay} ${operation} ${standardMH}`;
+            
+            // Special handling for Number and String operations
+            if (operation === 'Number' || operation === 'String') {
+                // For Number and String operations, show only Standard MH/UOM value
+                if (!standardMH || standardMH.trim() === '') {
+                    return operation === 'Number' ? '0' : 'EMPTY_STRING';
+                }
+                return standardMH;
+            } else {
+                // For math operations (+, -, *, /), show full format
+                if (!standardMH || standardMH.trim() === '' || standardMH === '0') {
+                    return paramDisplay;
+                }
+                return `${paramDisplay} ${operation} ${standardMH}`;
+            }
         } else {
             const leftVal = row.leftValue || 'LEFT';
             const condition = row.condition || '==';
@@ -929,18 +955,6 @@ function FeaturesV1({
                     />
                 </div>
 
-                {/* Module Description */}
-                <div className='col-block w200'>
-                    <TextField
-                        label="Module Description"
-                        value={row.moduleDesc}
-                        onChange={(e) => updateRow(row.id, 'moduleDesc', e.target.value)}
-                        variant="outlined"
-                        size="small"
-                        error={hasFieldError(row, 'moduleDesc')}
-                    />
-                </div>
-
                 {/* UOM - Disabled when IF checked */}
                 <div className='col-block'>
                     <FormControl 
@@ -987,7 +1001,7 @@ function FeaturesV1({
                     </FormControl>
                 </div>
 
-                {/* Standard MH/UOM - String input with math validation */}
+                {/* Standard MH/UOM - Dynamic validation based on operation */}
                 <div className='col-block'>
                     <TextField
                         label="Standard MH/UOM"
@@ -995,17 +1009,40 @@ function FeaturesV1({
                         value={String(row.standardMH || '')}
                         onChange={(e) => {
                             const value = e.target.value;
-                            // Only allow numbers, +, -, *, /, ., (, )
-                            const mathRegex = /^[0-9+\-*/.()]*$/;
-                            if (mathRegex.test(value)) {
-                                updateRow(row.id, 'standardMH', value);
+                            const operation = row.operation;
+                            
+                            // Different validation based on operation type
+                            if (operation === 'Number') {
+                                // Only allow numbers, +, -, *, /, ., (, )
+                                const mathRegex = /^[0-9+\-*/.()]*$/;
+                                if (mathRegex.test(value)) {
+                                    updateRow(row.id, 'standardMH', value);
+                                }
+                            } else if (operation === 'String') {
+                                // Allow A-Z, a-z, _, -, and single space
+                                const stringRegex = /^[A-Za-z_\- ]*$/;
+                                // Check for single space (no multiple consecutive spaces)
+                                const hasMultipleSpaces = /\s{2,}/.test(value);
+                                if (stringRegex.test(value) && !hasMultipleSpaces) {
+                                    updateRow(row.id, 'standardMH', value);
+                                }
+                            } else {
+                                // For +, -, *, / operations - math validation
+                                const mathRegex = /^[0-9+\-*/.()]*$/;
+                                if (mathRegex.test(value)) {
+                                    updateRow(row.id, 'standardMH', value);
+                                }
                             }
                         }}
                         variant="outlined"
                         size="small"
                         disabled={row.conditionType !== 'None'}
                         error={hasFieldError(row, 'standardMH')}
-                        placeholder="e.g. 10, (2+3)*4, 15.5"
+                        placeholder={
+                            row.operation === 'Number' ? "e.g. 10, (2+3)*4, 15.5" :
+                            row.operation === 'String' ? "e.g. Product_Name, Test-Case" :
+                            "e.g. 10, (2+3)*4, 15.5"
+                        }
                     />
                 </div>
 
@@ -1111,6 +1148,18 @@ function FeaturesV1({
                 {/* Formula Preview */}
                 <div className='col-block formula-preview'>
                     <span>{generateFormula(row)}</span>
+                </div>
+
+                {/* Comment */}
+                <div className='col-block w200'>
+                    <TextField
+                        label="Comment"
+                        value={row.moduleDesc}
+                        onChange={(e) => updateRow(row.id, 'moduleDesc', e.target.value)}
+                        variant="outlined"
+                        size="small"
+                        error={hasFieldError(row, 'moduleDesc')}
+                    />
                 </div>
 
                 {/* Delete Button - Only show for main rows, not for TRUE/FALSE child rows */}
