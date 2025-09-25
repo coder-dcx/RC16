@@ -34,10 +34,33 @@ function FeaturesV1({
     uomOptions = [], 
     onDataChange 
 }) {
+    // Simple ID counter for clean sequential IDs
+    const [idCounter, setIdCounter] = useState(1);
+    
+    // Generate next sequential ID
+    const generateNextId = () => {
+        const nextId = idCounter;
+        setIdCounter(prev => prev + 1);
+        console.log(`🆔 Generated ID: ${nextId}, next counter will be: ${nextId + 1}`);
+        return nextId;
+    };
+
+    // CRITICAL FIX: Synchronous ID generation to prevent duplicate IDs
+    const generateMultipleIds = (count) => {
+        const ids = [];
+        let currentId = idCounter;
+        for (let i = 0; i < count; i++) {
+            ids.push(currentId + i);
+        }
+        setIdCounter(prev => prev + count);
+        console.log(`🆔 Generated ${count} IDs: [${ids.join(', ')}], next counter: ${currentId + count}`);
+        return ids;
+    };
+
     // Create default initial rows if none provided
     const createDefaultRows = () => [
         {
-            id: `row_${Date.now()}`, // Use timestamp for unique ID
+            id: generateNextId(), // Use sequential ID
             parentId: null,
             isTrueBranch: null,
             branchIndex: null, // New field for multiple rows under same branch
@@ -116,8 +139,32 @@ function FeaturesV1({
     const finalParamOptions = paramIdOptions.length > 0 ? paramIdOptions : defaultParamOptions;
     const finalUomOptions = uomOptions.length > 0 ? uomOptions : defaultUomOptions;
 
+    // Initialize ID counter based on existing data
+    const initializeIdCounter = (rows) => {
+        let maxId = 0;
+        
+        const findMaxId = (rowsList) => {
+            rowsList.forEach(row => {
+                // Extract numeric part from ID (handle both numeric and string IDs)
+                const numericId = typeof row.id === 'number' ? row.id : 
+                                 typeof row.id === 'string' ? parseInt(row.id.replace(/\D/g, '')) || 0 : 0;
+                maxId = Math.max(maxId, numericId);
+                
+                // Check children recursively
+                if (row.children?.trueChildren) findMaxId(row.children.trueChildren);
+                if (row.children?.falseChildren) findMaxId(row.children.falseChildren);
+            });
+        };
+        
+        findMaxId(rows);
+        setIdCounter(maxId + 1); // Start from next available ID
+    };
+
     useEffect(() => {
         if (initialRows.length > 0) {
+            // Initialize ID counter based on existing data
+            initializeIdCounter(initialRows);
+            
             // Inline the initialization logic to avoid dependency issues
             const initializedRows = initialRows.map(row => ({
                 ...row,
@@ -325,10 +372,57 @@ function FeaturesV1({
         }
     });
 
-    // Update row data - Updated for array structure
+    // Update row data - Updated for array structure with deep copy and debugging
     const updateRow = (rowId, field, value) => {
         setRows(prevRows => {
-            const newRows = [...prevRows];
+            // Deep copy the entire rows structure to avoid reference issues
+            const newRows = JSON.parse(JSON.stringify(prevRows));
+            
+            // Debug: Log the update operation
+            console.log(`🔧 Updating row ${rowId}, field: ${field}, value:`, value);
+            
+            // Verify object uniqueness before update
+            const verifyUniqueness = (rows) => {
+                const findRowById = (rowsList, targetId) => {
+                    for (let row of rowsList) {
+                        if (row.id === targetId) return row;
+                        const trueFound = findRowById(row.children.trueChildren || [], targetId);
+                        if (trueFound) return trueFound;
+                        const falseFound = findRowById(row.children.falseChildren || [], targetId);
+                        if (falseFound) return falseFound;
+                    }
+                    return null;
+                };
+                
+                const targetRow = findRowById(rows, rowId);
+                if (targetRow && targetRow.parentId) {
+                    const parent = findRowById(rows, targetRow.parentId);
+                    if (parent) {
+                        const trueChildren = parent.children.trueChildren || [];
+                        const falseChildren = parent.children.falseChildren || [];
+                        
+                        console.log(`🔍 Debug - Target row ${rowId} references:`, {
+                            targetRow: targetRow,
+                            parentId: targetRow.parentId,
+                            isTrueBranch: targetRow.isTrueBranch,
+                            trueChildrenCount: trueChildren.length,
+                            falseChildrenCount: falseChildren.length
+                        });
+                        
+                        // Check if TRUE and FALSE children share references
+                        trueChildren.forEach((trueChild, trueIndex) => {
+                            falseChildren.forEach((falseChild, falseIndex) => {
+                                if (trueChild === falseChild) {
+                                    console.error(`🚨 REFERENCE ISSUE: TRUE child ${trueIndex} and FALSE child ${falseIndex} share the same reference!`);
+                                }
+                            });
+                        });
+                    }
+                }
+            };
+            
+            verifyUniqueness(newRows);
+            
             updateRowRecursive(newRows, rowId, field, value);
             if (onDataChange) onDataChange(newRows);
             return newRows;
@@ -338,6 +432,15 @@ function FeaturesV1({
     const updateRowRecursive = (rowsList, rowId, field, value) => {
         for (let row of rowsList) {
             if (row.id === rowId) {
+                // CRITICAL DEBUG: Log the exact update operation
+                console.log(`🎯 UPDATING ROW ${rowId}:`);
+                console.log(`   Field: ${field}`);
+                console.log(`   Old Value: ${row[field]}`);
+                console.log(`   New Value: ${value}`);
+                console.log(`   Row Branch: ${row.isTrueBranch ? 'TRUE' : 'FALSE'}`);
+                console.log(`   Row Object Reference:`, row);
+                
+                // Make the field update
                 row[field] = value;
                 
                 // Handle dependent field updates
@@ -345,8 +448,39 @@ function FeaturesV1({
                     const selectedParam = finalParamOptions.find(opt => opt.value === value);
                     if (selectedParam) {
                         row.paramDesc = selectedParam.description || '';
+                        console.log(`   ↳ Updated paramDesc: ${row.paramDesc}`);
                     }
                 }
+                
+                // CRITICAL CHECK: Verify if this same row object exists elsewhere
+                const verifyRowUniqueness = () => {
+                    let foundCount = 0;
+                    const checkRecursive = (checkRows, path = 'root') => {
+                        checkRows.forEach((checkRow, index) => {
+                            if (checkRow === row) { // Same object reference check
+                                foundCount++;
+                                console.log(`🚨 DUPLICATE REFERENCE FOUND: ${path}[${index}] -> Row ${rowId}`);
+                            }
+                            if (checkRow.children?.trueChildren) {
+                                checkRecursive(checkRow.children.trueChildren, `${path}.children.trueChildren`);
+                            }
+                            if (checkRow.children?.falseChildren) {
+                                checkRecursive(checkRow.children.falseChildren, `${path}.children.falseChildren`);
+                            }
+                        });
+                    };
+                    
+                    // Check from the top level
+                    checkRecursive(rowsList, 'currentLevel');
+                    
+                    if (foundCount > 1) {
+                        console.error(`🚨 CRITICAL: Row ${rowId} found ${foundCount} times with same object reference!`);
+                    } else {
+                        console.log(`✅ Row ${rowId} has unique object reference`);
+                    }
+                };
+                
+                verifyRowUniqueness();
                 return true;
             }
             
@@ -360,10 +494,11 @@ function FeaturesV1({
         return false;
     };
 
-    // Handle Condition Type change - Updated for dropdown structure
+    // Handle Condition Type change - Updated for dropdown structure with deep copy
     const handleConditionTypeChange = (rowId, conditionType) => {
         setRows(prevRows => {
-            const newRows = [...prevRows];
+            // Deep copy to avoid reference issues between TRUE and FALSE branches
+            const newRows = JSON.parse(JSON.stringify(prevRows));
             updateConditionTypeRecursive(newRows, rowId, conditionType);
             if (onDataChange) onDataChange(newRows);
             return newRows;
@@ -381,40 +516,87 @@ function FeaturesV1({
                 row.hasChildren = hasCondition;
                 
                 if (hasCondition && row.children.trueChildren.length === 0 && row.children.falseChildren.length === 0) {
-                    // Enhanced: Create child rows based on condition type
-                    const trueChild = createNewRow(`${rowId}_true_0`, rowId, true, 0);
-                    row.children.trueChildren = [trueChild];
+                    // CRITICAL FIX: Use synchronous ID generation to prevent duplicate IDs
+                    console.log(`🔧 Creating children for parent ${rowId}, condition type: ${conditionType}`);
                     
-                    // Only create FALSE child for IF-ELSE condition type
                     if (conditionType === 'IF-ELSE') {
-                        const falseChild = createNewRow(`${rowId}_false_0`, rowId, false, 0);
+                        // Generate both IDs at once to ensure they're unique
+                        const [trueChildId, falseChildId] = generateMultipleIds(2);
+                        
+                        const trueChild = createNewRow(trueChildId, rowId, true, 0);
+                        const falseChild = createNewRow(falseChildId, rowId, false, 0);
+                        
+                        row.children.trueChildren = [trueChild];
                         row.children.falseChildren = [falseChild];
-                    } else {
-                        // For IF condition, keep FALSE children empty
+                        
+                        console.log(`✅ Created TRUE child ID: ${trueChildId}, FALSE child ID: ${falseChildId}`);
+                        
+                        // Verify they are different
+                        if (trueChild === falseChild) {
+                            console.error(`🚨 CRITICAL: TRUE and FALSE children share the same reference!`);
+                        } else if (trueChild.id === falseChild.id) {
+                            console.error(`🚨 CRITICAL: TRUE and FALSE children have the same ID! TRUE: ${trueChild.id}, FALSE: ${falseChild.id}`);
+                        } else {
+                            console.log(`✅ VERIFIED: TRUE child ${trueChild.id} and FALSE child ${falseChild.id} have unique IDs`);
+                        }
+                    } else if (conditionType === 'IF') {
+                        // Only TRUE child for IF condition
+                        const trueChildId = generateNextId();
+                        const trueChild = createNewRow(trueChildId, rowId, true, 0);
+                        row.children.trueChildren = [trueChild];
                         row.children.falseChildren = [];
+                        
+                        console.log(`✅ Created TRUE child ID: ${trueChildId} for IF condition`);
                     }
                     
                     row.isExpanded = true;
                 } else if (hasCondition) {
-                    // Handle switching between IF and IF-ELSE
+                    // Handle switching between IF and IF-ELSE with guaranteed unique IDs
+                    console.log(`🔄 Switching condition type to: ${conditionType} for parent ${rowId}`);
+                    
                     if (conditionType === 'IF') {
                         // Clear FALSE children when switching to IF-only
                         row.children.falseChildren = [];
                         // Ensure TRUE children exist
                         if (row.children.trueChildren.length === 0) {
-                            const trueChild = createNewRow(`${rowId}_true_0`, rowId, true, 0);
+                            const trueChildId = generateNextId();
+                            const trueChild = createNewRow(trueChildId, rowId, true, 0);
                             row.children.trueChildren = [trueChild];
+                            console.log(`✅ Added TRUE child ID: ${trueChildId} for IF condition`);
                         }
                     } else if (conditionType === 'IF-ELSE') {
-                        // Add FALSE children when switching to IF-ELSE
-                        if (row.children.falseChildren.length === 0) {
-                            const falseChild = createNewRow(`${rowId}_false_0`, rowId, false, 0);
-                            row.children.falseChildren = [falseChild];
-                        }
-                        // Ensure TRUE children exist
-                        if (row.children.trueChildren.length === 0) {
-                            const trueChild = createNewRow(`${rowId}_true_0`, rowId, true, 0);
-                            row.children.trueChildren = [trueChild];
+                        // Determine how many new children we need
+                        const needsTrue = row.children.trueChildren.length === 0;
+                        const needsFalse = row.children.falseChildren.length === 0;
+                        const childrenNeeded = (needsTrue ? 1 : 0) + (needsFalse ? 1 : 0);
+                        
+                        if (childrenNeeded > 0) {
+                            // Generate unique IDs for all needed children
+                            const newIds = generateMultipleIds(childrenNeeded);
+                            let idIndex = 0;
+                            
+                            if (needsTrue) {
+                                const trueChild = createNewRow(newIds[idIndex++], rowId, true, 0);
+                                row.children.trueChildren = [trueChild];
+                                console.log(`✅ Added TRUE child ID: ${trueChild.id} for IF-ELSE switch`);
+                            }
+                            
+                            if (needsFalse) {
+                                const falseChild = createNewRow(newIds[idIndex++], rowId, false, 0);
+                                row.children.falseChildren = [falseChild];
+                                console.log(`✅ Added FALSE child ID: ${falseChild.id} for IF-ELSE switch`);
+                            }
+                            
+                            // Final verification
+                            const allTrueIds = row.children.trueChildren.map(child => child.id);
+                            const allFalseIds = row.children.falseChildren.map(child => child.id);
+                            const duplicateIds = allTrueIds.filter(id => allFalseIds.includes(id));
+                            
+                            if (duplicateIds.length > 0) {
+                                console.error(`🚨 DUPLICATE IDs FOUND: ${duplicateIds.join(', ')}`);
+                            } else {
+                                console.log(`✅ VERIFIED: All child IDs are unique. TRUE: [${allTrueIds.join(', ')}], FALSE: [${allFalseIds.join(', ')}]`);
+                            }
                         }
                     }
                 } else if (!hasCondition) {
@@ -436,10 +618,10 @@ function FeaturesV1({
         return false;
     };
 
-    // Toggle expand/collapse - Updated for array structure
+    // Toggle expand/collapse - Updated for array structure with deep copy
     const toggleExpand = (rowId) => {
         setRows(prevRows => {
-            const newRows = [...prevRows];
+            const newRows = JSON.parse(JSON.stringify(prevRows));
             toggleExpandRecursive(newRows, rowId);
             return newRows;
         });
@@ -462,10 +644,10 @@ function FeaturesV1({
         return false;
     };
 
-    // NEW FEATURE: Add multiple rows under TRUE/FALSE branches
+    // NEW FEATURE: Add multiple rows under TRUE/FALSE branches with deep copy
     const addChildRow = (parentRowId, isTrueBranch) => {
         setRows(prevRows => {
-            const newRows = [...prevRows];
+            const newRows = JSON.parse(JSON.stringify(prevRows));
             addChildRowRecursive(newRows, parentRowId, isTrueBranch);
             if (onDataChange) onDataChange(newRows);
             return newRows;
@@ -477,7 +659,7 @@ function FeaturesV1({
             if (row.id === parentRowId) {
                 const targetArray = isTrueBranch ? row.children.trueChildren : row.children.falseChildren;
                 const newIndex = targetArray.length;
-                const newRowId = `${parentRowId}_${isTrueBranch ? 'true' : 'false'}_${newIndex}`;
+                const newRowId = generateNextId(); // Use sequential ID for simplicity
                 
                 const newChildRow = createNewRow(newRowId, parentRowId, isTrueBranch, newIndex);
                 targetArray.push(newChildRow);
@@ -497,10 +679,10 @@ function FeaturesV1({
         return false;
     };
 
-    // NEW FEATURE: Remove child row from TRUE/FALSE branches
+    // NEW FEATURE: Remove child row from TRUE/FALSE branches with deep copy
     const removeChildRow = (parentRowId, isTrueBranch, childIndex) => {
         setRows(prevRows => {
-            const newRows = [...prevRows];
+            const newRows = JSON.parse(JSON.stringify(prevRows));
             removeChildRowRecursive(newRows, parentRowId, isTrueBranch, childIndex);
             if (onDataChange) onDataChange(newRows);
             return newRows;
@@ -515,10 +697,10 @@ function FeaturesV1({
                 if (childIndex >= 0 && childIndex < targetArray.length) {
                     targetArray.splice(childIndex, 1);
                     
-                    // Re-index remaining children
+                    // Re-index remaining children (keep their IDs but update branchIndex)
                     targetArray.forEach((child, index) => {
                         child.branchIndex = index;
-                        child.id = `${parentRowId}_${isTrueBranch ? 'true' : 'false'}_${index}`;
+                        // Don't change the ID - keep the sequential ID system
                     });
                     
                     // Update hasChildren status
@@ -680,9 +862,9 @@ function FeaturesV1({
         }
     };
 
-    // Add new row to the grid (unchanged)
+    // Add new row to the grid - Updated with sequential ID
     const addNewRow = () => {
-        const newRowId = `row_${Date.now()}`;
+        const newRowId = generateNextId();
         const newRow = createNewRow(newRowId);
         setRows(prevRows => {
             const updatedRows = [...prevRows, newRow];
@@ -691,10 +873,11 @@ function FeaturesV1({
         });
     };
 
-    // Delete row from the grid - Updated for array structure
+    // Delete row from the grid - Updated for array structure with deep copy
     const deleteRow = (rowId) => {
         setRows(prevRows => {
-            const updatedRows = removeRowRecursive(prevRows, rowId);
+            const deepCopiedRows = JSON.parse(JSON.stringify(prevRows));
+            const updatedRows = removeRowRecursive(deepCopiedRows, rowId);
             if (onDataChange) onDataChange(updatedRows);
             return updatedRows;
         });
@@ -810,26 +993,56 @@ function FeaturesV1({
             console.log(`✅ TRUE Branch Children: ${dbData.filter(r => r.isTrueBranch === true).length}`);
             console.log(`❌ FALSE Branch Children: ${dbData.filter(r => r.isTrueBranch === false).length}`);
             
-            // Show SQL-ready format
+            // Show SQL-ready format with enhanced parent-child visualization
             console.log('🗄️ === SQL INSERT READY FORMAT ===');
+            
+            // Group by parent-child relationships for cleaner display
+            const parentRows = dbData.filter(r => !r.parentId);
+            const childRows = dbData.filter(r => r.parentId);
+            
+            console.log('📋 ROOT ROWS (Parents):');
+            parentRows.forEach((row, index) => {
+                console.log(`  ${index + 1}. ID: ${row.id} | ParamID: [${row.paramId}] | Operation: ${row.operation} | Standard MH: ${row.standardMH}`);
+                
+                // Find children for this parent
+                const trueChildren = childRows.filter(c => c.parentId === row.id && c.isTrueBranch === true);
+                const falseChildren = childRows.filter(c => c.parentId === row.id && c.isTrueBranch === false);
+                
+                if (trueChildren.length > 0) {
+                    console.log(`    ✅ TRUE Branch (${trueChildren.length} children):`);
+                    trueChildren.forEach((child, idx) => {
+                        console.log(`      ${idx + 1}. ID: ${child.id} | ParamID: [${child.paramId}] | Operation: ${child.operation} | Standard MH: ${child.standardMH}`);
+                    });
+                }
+                
+                if (falseChildren.length > 0) {
+                    console.log(`    ❌ FALSE Branch (${falseChildren.length} children):`);
+                    falseChildren.forEach((child, idx) => {
+                        console.log(`      ${idx + 1}. ID: ${child.id} | ParamID: [${child.paramId}] | Operation: ${child.operation} | Standard MH: ${child.standardMH}`);
+                    });
+                }
+                
+                if (trueChildren.length === 0 && falseChildren.length === 0) {
+                    console.log('    📄 No children (simple row)');
+                }
+                console.log(''); // Empty line for readability
+            });
+            
+            console.log('📊 DETAILED SQL INSERT DATA:');
             dbData.forEach((row, index) => {
-                console.log(`Row ${index + 1}:`, {
+                const rowType = row.parentId ? `Child of ${row.parentId} (${row.isTrueBranch ? 'TRUE' : 'FALSE'})` : 'Root Row';
+                console.log(`Row ${index + 1} [${rowType}]:`, {
                     id: row.id,
                     parentId: row.parentId,
                     isTrueBranch: row.isTrueBranch,
                     branchIndex: row.branchIndex,
                     paramId: row.paramId,
-                    paramDesc: row.paramDesc,
-                    moduleDesc: row.moduleDesc,
-                    uom: row.uom,
                     operation: row.operation,
                     standardMH: row.standardMH,
-                    ifChecked: row.ifChecked,
-                    leftType: row.leftType,
-                    leftValue: row.leftValue,
-                    condition: row.condition,
-                    rightType: row.rightType,
-                    rightValue: row.rightValue
+                    // Only show IF condition fields if they exist
+                    ...(row.leftType && { leftType: row.leftType, leftValue: row.leftValue }),
+                    ...(row.condition && { condition: row.condition }),
+                    ...(row.rightType && { rightType: row.rightType, rightValue: row.rightValue })
                 });
             });
             

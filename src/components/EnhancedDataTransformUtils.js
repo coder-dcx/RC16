@@ -10,11 +10,12 @@
 /**
  * Convert database numeric ID to component string ID
  * @param {number} dbId - Database ID (number)
- * @returns {string} Component ID (string)
+ * @returns {string|null} Component ID (string)
  */
 export const dbIdToComponentId = (dbId) => {
     if (dbId === null || dbId === undefined) return null;
-    return `row_${dbId}`;
+    // For consistency, always return numeric ID as-is for the new system
+    return dbId;
 };
 
 /**
@@ -23,17 +24,34 @@ export const dbIdToComponentId = (dbId) => {
  * @returns {number|null} Database ID (number)
  */
 export const componentIdToDbId = (componentId) => {
-    if (!componentId || typeof componentId !== 'string') return null;
+    if (componentId === null || componentId === undefined) return null;
     
-    // Handle special cases for auto-generated IDs with branch info
-    if (componentId.includes('_true_') || componentId.includes('_false_')) {
-        const parts = componentId.split('_');
-        const baseId = parts[1];
-        return parseInt(baseId, 10) || null;
+    // Handle numeric IDs (new sequential system)
+    if (typeof componentId === 'number') {
+        return componentId;
     }
     
-    const match = componentId.match(/^row_(\d+)$/);
-    return match ? parseInt(match[1], 10) : null;
+    // Handle string IDs (legacy and special cases)
+    if (typeof componentId === 'string') {
+        // Handle special cases for auto-generated IDs with branch info
+        if (componentId.includes('_true_') || componentId.includes('_false_')) {
+            const parts = componentId.split('_');
+            const baseId = parts[1];
+            return parseInt(baseId, 10) || null;
+        }
+        
+        // Handle "row_123" format
+        const match = componentId.match(/^row_(\d+)$/);
+        if (match) {
+            return parseInt(match[1], 10);
+        }
+        
+        // Try to parse as a direct number string
+        const numericId = parseInt(componentId, 10);
+        return isNaN(numericId) ? null : numericId;
+    }
+    
+    return null;
 };
 
 // =====================================
