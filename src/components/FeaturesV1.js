@@ -57,10 +57,13 @@ function FeaturesV1({
         return ids;
     };
 
-    // Create default initial rows if none provided
-    const createDefaultRows = () => [
-        {
-            id: generateNextId(), // Use sequential ID
+    // Create default initial rows if needed - Fixed to not cause infinite loops
+    const createDefaultRow = () => {
+        const newId = idCounter;  // Use current counter value without triggering state update
+        setIdCounter(prev => prev + 1); // Update counter separately
+        
+        return {
+            id: newId,
             parentId: null,
             isTrueBranch: null,
             branchIndex: null, // New field for multiple rows under same branch
@@ -83,8 +86,8 @@ function FeaturesV1({
                 trueChildren: [], // Changed from single child to array
                 falseChildren: [] // Changed from single child to array
             }
-        }
-    ];
+        };
+    };
 
     // Initialize rows with proper handling of database data
     const initializeRows = () => {
@@ -108,10 +111,11 @@ function FeaturesV1({
                 branchIndex: row.branchIndex !== undefined ? row.branchIndex : null
             }));
         }
-        return createDefaultRows();
+        // FIXED: Return empty array instead of creating default rows to prevent infinite loop
+        return [];
     };
 
-    const [rows, setRows] = useState(initializeRows());
+    const [rows, setRows] = useState(initializeRows);  // Use function reference, not function call
     
     // Validation state
     const [validationErrors, setValidationErrors] = useState({});
@@ -862,11 +866,10 @@ function FeaturesV1({
         }
     };
 
-    // Add new row to the grid - Updated with sequential ID
+    // Add new row to the grid - Updated with sequential ID and safe initialization
     const addNewRow = () => {
-        const newRowId = generateNextId();
-        const newRow = createNewRow(newRowId);
         setRows(prevRows => {
+            const newRow = createDefaultRow(); // Use the safe default row creation
             const updatedRows = [...prevRows, newRow];
             if (onDataChange) onDataChange(updatedRows);
             return updatedRows;
@@ -1531,7 +1534,39 @@ function FeaturesV1({
 
             {/* Formula Build Form */}
             <div className='formula-build-form'>
-                {rows.map(row => renderRow(row))}
+                {rows.length > 0 ? (
+                    rows.map(row => renderRow(row))
+                ) : (
+                    <div style={{ 
+                        padding: '40px', 
+                        textAlign: 'center', 
+                        backgroundColor: '#f8f9fa',
+                        border: '2px dashed #dee2e6',
+                        borderRadius: '8px',
+                        margin: '20px 0'
+                    }}>
+                        <Typography variant="h6" color="textSecondary" gutterBottom>
+                            No rows available
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary" paragraph>
+                            Click the "Add Row" button to create your first formula row.
+                        </Typography>
+                        <button
+                            onClick={addNewRow}
+                            style={{
+                                padding: '10px 20px',
+                                backgroundColor: '#4caf50',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '16px'
+                            }}
+                        >
+                            ➕ Add First Row
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Validation Alert */}

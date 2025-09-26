@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import FeaturesV1 from './FeaturesV1';
 import { 
-    enhancedSampleDatabaseData, 
-    enhancedSampleParameterOptions, 
-    enhancedSampleUomOptions,
-    prepareEnhancedDataForComponent,
     prepareEnhancedDataForDatabase
 } from './EnhancedDataTransformUtils';
 
@@ -19,6 +15,252 @@ import {
  * 5. Database format logging on save
  */
 function FeaturesV1Example() {
+    // Custom data for testing - Replace this with your actual data
+    const customInitialRows = [{
+        "id": 1,
+        "parentId": null,
+        "isTrueBranch": null,
+        "branchIndex": null,
+        "paramId": "17132",
+        "operation": "*",
+        "standardMH": "84"
+    }, {
+        "id": 2,
+        "parentId": null,
+        "isTrueBranch": null,
+        "branchIndex": null,
+        "paramId": "1000",
+        "operation": "",
+        "standardMH": "",
+        "leftType": "PARAM ID",
+        "leftValue": "1000",
+        "condition": "=",
+        "rightType": "TEXT",
+        "rightValue": "OT1.1"
+    }, {
+        "id": 3,
+        "parentId": 2,
+        "isTrueBranch": true,
+        "branchIndex": 0,
+        "paramId": "18910",
+        "operation": "*",
+        "standardMH": "1.39"
+    }, {
+        "id": 5,
+        "parentId": 2,
+        "isTrueBranch": true,
+        "branchIndex": 1,
+        "paramId": "18911",
+        "operation": "*",
+        "standardMH": "1.54"
+    }, {
+        "id": 4,
+        "parentId": 2,
+        "isTrueBranch": false,
+        "branchIndex": 0,
+        "paramId": "18910",
+        "operation": "*",
+        "standardMH": "1.05"
+    }, {
+        "id": 6,
+        "parentId": 2,
+        "isTrueBranch": false,
+        "branchIndex": 1,
+        "paramId": "18910",
+        "operation": "",
+        "standardMH": "",
+        "leftType": "PARAM ID",
+        "leftValue": "18910",
+        "condition": ">",
+        "rightType": "NUMBER",
+        "rightValue": "0"
+    }, {
+        "id": 7,
+        "parentId": 6,
+        "isTrueBranch": true,
+        "branchIndex": 0,
+        "paramId": "18910",
+        "operation": "Number",
+        "standardMH": "316"
+    }, {
+        "id": 8,
+        "parentId": 6,
+        "isTrueBranch": false,
+        "branchIndex": 0,
+        "paramId": "18910",
+        "operation": "Number",
+        "standardMH": "0"
+    }, {
+        "id": 9,
+        "parentId": 2,
+        "isTrueBranch": false,
+        "branchIndex": 2,
+        "paramId": "18920",
+        "operation": "*",
+        "standardMH": "150"
+    }, {
+        "id": 10,
+        "parentId": 2,
+        "isTrueBranch": false,
+        "branchIndex": 3,
+        "paramId": "18910",
+        "operation": "",
+        "standardMH": "",
+        "leftType": "PARAM ID",
+        "leftValue": "18910",
+        "condition": ">",
+        "rightType": "NUMBER",
+        "rightValue": "0"
+    }, {
+        "id": 11,
+        "parentId": 10,
+        "isTrueBranch": true,
+        "branchIndex": 0,
+        "paramId": "18910",
+        "operation": "Number",
+        "standardMH": "200"
+    }, {
+        "id": 12,
+        "parentId": 10,
+        "isTrueBranch": false,
+        "branchIndex": 0,
+        "paramId": "18910",
+        "operation": "Number",
+        "standardMH": "0"
+    }];
+
+    const customParamIdOptions = [{
+        value: '1000',
+        label: '[1000]',
+        description: '1000 - Testing Description'
+    }, {
+        value: '15371',
+        label: '[15371]',
+        description: '15371 - Testing Description'
+    }, {
+        value: '15515',
+        label: '[15515]',
+        description: '15515 - Testing Description'
+    }, {
+        value: '15516',
+        label: '[15516]',
+        description: '15516 - Testing Description'
+    }, {
+        value: '15517',
+        label: '[15517]',
+        description: '15517 - Testing Description'
+    }, {
+        value: '15518',
+        label: '[15518]',
+        description: '15518 - Testing Description'
+    }, {
+        value: '15519',
+        label: '[15519]',
+        description: '15519 - Testing Description'
+    }, {
+        value: '15520',
+        label: '[15520]',
+        description: '15520 - Testing Description'
+    }, {
+        value: '15984',
+        label: '[15984]',
+        description: '15984 - Testing Description'
+    }, {
+        value: '17132',
+        label: '[17132]',
+        description: '17132 - Testing Description'
+    }, {
+        value: '18910',
+        label: '[18910]',
+        description: '18910 - Testing Description'
+    }, {
+        value: '18911',
+        label: '[18911]',
+        description: '18911 - Testing Description'
+    }, {
+        value: '18912',
+        label: '[18912]',
+        description: '18912 - Testing Description'
+    }, {
+        value: '18913',
+        label: '[18913]',
+        description: '18913 - Testing Description'
+    }, {
+        value: '18920',
+        label: '[18920]',
+        description: '18920 - Testing Description'
+    }];
+
+    const customUomOptions = [{
+        value: 'EA',
+        label: 'EA'
+    }];
+
+    // Helper function to transform flat data to nested structure
+    const transformFlatToNestedData = (flatData) => {
+        console.log('🔄 Transforming flat data to nested structure...');
+        console.log('📊 Input flat data:', flatData);
+
+        // Create a map for quick lookup
+        const dataMap = new Map();
+        
+        // First pass: Create all rows with basic structure
+        flatData.forEach(row => {
+            dataMap.set(row.id, {
+                ...row,
+                // Set default values for missing fields
+                paramDesc: row.paramDesc || '',
+                moduleDesc: row.moduleDesc || '',
+                uom: row.uom || 'EA',
+                conditionType: row.conditionType || (row.leftValue ? 'IF-ELSE' : 'None'),
+                ifChecked: row.ifChecked !== undefined ? row.ifChecked : !!row.leftValue,
+                isExpanded: row.isExpanded !== undefined ? row.isExpanded : !!row.leftValue,
+                hasChildren: false, // Will be updated in second pass
+                // Initialize children structure
+                children: {
+                    trueChildren: [],
+                    falseChildren: []
+                }
+            });
+        });
+
+        // Second pass: Build parent-child relationships
+        dataMap.forEach(row => {
+            if (row.parentId !== null && row.parentId !== undefined) {
+                const parent = dataMap.get(row.parentId);
+                if (parent) {
+                    parent.hasChildren = true;
+                    parent.isExpanded = true;
+                    
+                    // Add to appropriate branch based on isTrueBranch
+                    if (row.isTrueBranch === true) {
+                        parent.children.trueChildren.push(row);
+                    } else if (row.isTrueBranch === false) {
+                        parent.children.falseChildren.push(row);
+                    }
+                }
+            }
+        });
+
+        // Sort children by branchIndex
+        dataMap.forEach(row => {
+            if (row.children.trueChildren.length > 0) {
+                row.children.trueChildren.sort((a, b) => (a.branchIndex || 0) - (b.branchIndex || 0));
+            }
+            if (row.children.falseChildren.length > 0) {
+                row.children.falseChildren.sort((a, b) => (a.branchIndex || 0) - (b.branchIndex || 0));
+            }
+        });
+
+        // Get root rows (no parent)
+        const rootRows = Array.from(dataMap.values()).filter(row => row.parentId === null || row.parentId === undefined);
+        
+        console.log('✅ Transformation complete. Root rows:', rootRows.length);
+        console.log('🌳 Nested structure:', rootRows);
+        
+        return rootRows;
+    };
+
     const [componentData, setComponentData] = useState({
         initialRows: [],
         paramIdOptions: [],
@@ -37,47 +279,47 @@ function FeaturesV1Example() {
             await new Promise(resolve => setTimeout(resolve, 1000));
             
             console.log('🚀 ===== LOADING FEATURESV1 DATA =====');
-            console.log('🗄️ Raw Database Data:', enhancedSampleDatabaseData);
-            console.log('🔢 Total rows from DB:', enhancedSampleDatabaseData.length);
+            console.log('🗄️ Custom Flat Data:', customInitialRows);
+            console.log('🔢 Total rows from flat data:', customInitialRows.length);
             
-            // Migrate sample data to include conditionType field
-            const migratedData = enhancedSampleDatabaseData.map(row => ({
-                ...row,
-                // Convert ifChecked to conditionType for demo
-                conditionType: row.ifChecked ? 'IF-ELSE' : 'None'
-            }));
+            // Transform flat data to nested structure
+            const nestedRows = transformFlatToNestedData(customInitialRows);
             
-            console.log('🔄 Migrated data with conditionType:', migratedData);
+            console.log('🌳 Transformed to nested structure:', nestedRows);
             
-            // Transform using utility function
-            const transformedData = prepareEnhancedDataForComponent(
-                migratedData,
-                enhancedSampleParameterOptions,
-                enhancedSampleUomOptions
-            );
-            
-            console.log('🌳 Transformation result:', transformedData);
-            
-            // DEBUG: Verify condition types
-            transformedData.initialRows.forEach((rootRow, index) => {
+            // DEBUG: Verify nested structure
+            nestedRows.forEach((rootRow, index) => {
                 console.log(`🎯 Root Row ${index + 1} (${rootRow.id}):`);
                 console.log(`  - paramId: ${rootRow.paramId}`);
                 console.log(`  - conditionType: ${rootRow.conditionType}`);
-                console.log(`  - ifChecked: ${rootRow.ifChecked} (legacy)`);
                 console.log(`  - hasChildren: ${rootRow.hasChildren}`);
                 console.log(`  - trueChildren: ${rootRow.children.trueChildren.length}`);
                 console.log(`  - falseChildren: ${rootRow.children.falseChildren.length}`);
+                
+                // Show children details
+                if (rootRow.children.trueChildren.length > 0) {
+                    console.log(`    TRUE Children:`);
+                    rootRow.children.trueChildren.forEach((child, idx) => {
+                        console.log(`      ${idx + 1}. ID: ${child.id}, ParamID: ${child.paramId}, Op: ${child.operation}, StandardMH: ${child.standardMH}`);
+                    });
+                }
+                if (rootRow.children.falseChildren.length > 0) {
+                    console.log(`    FALSE Children:`);
+                    rootRow.children.falseChildren.forEach((child, idx) => {
+                        console.log(`      ${idx + 1}. ID: ${child.id}, ParamID: ${child.paramId}, Op: ${child.operation}, StandardMH: ${child.standardMH}`);
+                    });
+                }
             });
             
-            // Set the component data
+            // Set the component data with custom data
             setComponentData({
-                initialRows: transformedData.initialRows,
-                paramIdOptions: transformedData.paramIdOptions,
-                uomOptions: transformedData.uomOptions
+                initialRows: nestedRows,
+                paramIdOptions: customParamIdOptions,
+                uomOptions: customUomOptions
             });
             
-            console.log('✅ FeaturesV1 data loaded successfully!');
-            setSaveStatus(`✅ Loaded ${migratedData.length} rows with conditionType support - Ready for testing!`);
+            console.log('✅ FeaturesV1 custom data loaded successfully!');
+            setSaveStatus(`✅ Loaded ${customInitialRows.length} rows transformed to ${nestedRows.length} root rows - Ready for testing!`);
             
         } catch (error) {
             console.error('❌ Error loading FeaturesV1 data:', error);
@@ -119,7 +361,7 @@ function FeaturesV1Example() {
     // Load data when component mounts
     useEffect(() => {
         loadFeaturesV1Data();
-    }, []);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <div style={{ padding: '20px' }}>
@@ -252,26 +494,14 @@ function FeaturesV1Example() {
             </div>
 
             {/* The FeaturesV1 Component */}
-            {componentData.initialRows.length > 0 ? (
-                <div style={{ border: '2px solid #4caf50', borderRadius: '8px', padding: '10px' }}>
-                    <FeaturesV1
-                        initialRows={componentData.initialRows}
-                        paramIdOptions={componentData.paramIdOptions}
-                        uomOptions={componentData.uomOptions}
-                        onDataChange={saveFeaturesV1Data}
-                    />
-                </div>
-            ) : (
-                <div style={{ 
-                    padding: '40px', 
-                    textAlign: 'center', 
-                    backgroundColor: '#f8f9fa',
-                    border: '1px solid #dee2e6',
-                    borderRadius: '4px'
-                }}>
-                    {loading ? '🔄 Loading FeaturesV1 data...' : '📭 No data available. Click "Reload FeaturesV1 Data" to load sample data.'}
-                </div>
-            )}
+            <div style={{ border: '2px solid #4caf50', borderRadius: '8px', padding: '10px' }}>
+                <FeaturesV1
+                    initialRows={componentData.initialRows}
+                    paramIdOptions={componentData.paramIdOptions}
+                    uomOptions={componentData.uomOptions}
+                    onDataChange={saveFeaturesV1Data}
+                />
+            </div>
 
             {/* Usage Instructions */}
             <div style={{ 
