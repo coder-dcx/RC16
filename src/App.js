@@ -21,6 +21,7 @@ import DatabaseExampleUsage from './components/DatabaseExampleUsage';
 import IFAndLookup from './components/IFAndLookup';
 import EnhancedExampleUsage from './components/EnhancedExampleUsage';
 import FeaturesV1Example from './components/FeaturesV1Example';
+import FeaturesV2Example from './components/FeaturesV2Example';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -144,6 +145,25 @@ const WelcomePage = () => {
               <CardContent>
                 <DataUsageIcon className={classes.cardIcon} />
                 <Typography variant="h5" component="h2" gutterBottom>
+                  🚀 FeaturesV2
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Advanced with LOOKUP function and reorganized fields
+                </Typography>
+                <Box mt={2}>
+                  <Button variant="contained" style={{ backgroundColor: '#e91e63', color: 'white' }} onClick={() => window.location.href = '/featuresv2'}>
+                    FeaturesV2 Demo
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Card className={classes.card}>
+              <CardContent>
+                <DataUsageIcon className={classes.cardIcon} />
+                <Typography variant="h5" component="h2" gutterBottom>
                   Enhanced Builder
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
@@ -203,6 +223,7 @@ const App = () => {
         <Route path="/enhanced" component={IFAndLookup} />
         <Route path="/enhanced-demo" component={EnhancedExampleUsage} />
         <Route path="/featuresv1" component={FeaturesV1Example} />
+        <Route path="/featuresv2" component={FeaturesV2Example} />
       </Switch>
     </div>
   );
