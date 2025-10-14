@@ -22,6 +22,7 @@ import IFAndLookup from './components/IFAndLookup';
 import EnhancedExampleUsage from './components/EnhancedExampleUsage';
 import FeaturesV1Example from './components/FeaturesV1Example';
 import FeaturesV2Example from './components/FeaturesV2Example';
+import FeaturesV3Example from './components/FeaturesV3Example';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -164,6 +165,25 @@ const WelcomePage = () => {
               <CardContent>
                 <DataUsageIcon className={classes.cardIcon} />
                 <Typography variant="h5" component="h2" gutterBottom>
+                  🎯 FeaturesV3
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  FeaturesV1 + LOOKUP: Complete IF/IF-ELSE/LOOKUP builder
+                </Typography>
+                <Box mt={2}>
+                  <Button variant="contained" style={{ backgroundColor: '#3f51b5', color: 'white' }} onClick={() => window.location.href = '/featuresv3'}>
+                    FeaturesV3 Demo
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Card className={classes.card}>
+              <CardContent>
+                <DataUsageIcon className={classes.cardIcon} />
+                <Typography variant="h5" component="h2" gutterBottom>
                   Enhanced Builder
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
@@ -224,6 +244,7 @@ const App = () => {
         <Route path="/enhanced-demo" component={EnhancedExampleUsage} />
         <Route path="/featuresv1" component={FeaturesV1Example} />
         <Route path="/featuresv2" component={FeaturesV2Example} />
+        <Route path="/featuresv3" component={FeaturesV3Example} />
       </Switch>
     </div>
   );
