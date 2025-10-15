@@ -338,6 +338,7 @@ function FeaturesV3({
         uom: 'EA',
         operation: '*',
         standardMH: '',
+        rowOperator: '+', // Operator to combine this row with previous rows
         conditionType: 'None',
         ifChecked: false,
         isExpanded: false,
@@ -744,7 +745,14 @@ function FeaturesV3({
             const generateChildrenFormula = (children) => {
                 if (children.length === 0) return 'NO_FORMULA';
                 if (children.length === 1) return generateFormula(children[0]);
-                return `(${children.map(child => generateFormula(child)).join(' + ')})`;
+                
+                // Build formula using each child's rowOperator
+                let formula = `(${generateFormula(children[0])})`;
+                for (let i = 1; i < children.length; i++) {
+                    const childOperator = children[i].rowOperator || '+';
+                    formula += ` ${childOperator} (${generateFormula(children[i])})`;
+                }
+                return formula;
             };
             
             const trueFormula = generateChildrenFormula(row.children.trueChildren);
@@ -895,7 +903,14 @@ function FeaturesV3({
     const generateCompleteFormula = () => {
         if (rows.length === 0) return '';
         if (rows.length === 1) return generateFormula(rows[0]);
-        return rows.map(row => `(${generateFormula(row)})`).join(' + ');
+        
+        // Build formula using each row's rowOperator
+        let formula = `(${generateFormula(rows[0])})`;
+        for (let i = 1; i < rows.length; i++) {
+            const rowOperator = rows[i].rowOperator || '+';
+            formula += ` ${rowOperator} (${generateFormula(rows[i])})`;
+        }
+        return formula;
     };
 
     // Save data
@@ -1038,7 +1053,7 @@ function FeaturesV3({
     };
 
     // Enhanced row rendering
-    const renderRow = (row, isChild = false, childIndex = null) => (
+    const renderRow = (row, isChild = false, childIndex = null, rowIndex = 0) => (
         <div key={row.id} className={isChild ? 'custom-child-row' : 'row'}>
             <div className='custom-row border-bottom'>
                 
@@ -1056,6 +1071,25 @@ function FeaturesV3({
                     )}
                 </div>
 
+                {/* Row Operator - Only show for root rows (not first) */}
+                {!isChild && rowIndex > 0 && (
+                    <div className='col-block w60'>
+                        <FormControl variant="outlined" size="small" fullWidth>
+                            <InputLabel>Row Op</InputLabel>
+                            <Select
+                                value={row.rowOperator || '+'}
+                                onChange={(e) => updateRow(row.id, 'rowOperator', e.target.value)}
+                                label="Row Op"
+                            >
+                                <MenuItem value="+">+</MenuItem>
+                                <MenuItem value="*">×</MenuItem>
+                                <MenuItem value="/">÷</MenuItem>
+                                <MenuItem value="-">−</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </div>
+                )}
+
                 {/* TRUE/FALSE Indicator for child rows */}
                 {isChild && (
                     <div className={`col-block col-condition ${row.isTrueBranch ? 'true' : 'false'} w40`}>
@@ -1065,6 +1099,25 @@ function FeaturesV3({
                                 {childIndex + 1}
                             </Typography>
                         )}
+                    </div>
+                )}
+
+                {/* Row Operator for child rows (not first child) */}
+                {isChild && childIndex > 0 && (
+                    <div className='col-block w60'>
+                        <FormControl variant="outlined" size="small" fullWidth>
+                            <InputLabel>Row Op</InputLabel>
+                            <Select
+                                value={row.rowOperator || '+'}
+                                onChange={(e) => updateRow(row.id, 'rowOperator', e.target.value)}
+                                label="Row Op"
+                            >
+                                <MenuItem value="+">+</MenuItem>
+                                <MenuItem value="*">×</MenuItem>
+                                <MenuItem value="/">÷</MenuItem>
+                                <MenuItem value="-">−</MenuItem>
+                            </Select>
+                        </FormControl>
                     </div>
                 )}
 
@@ -1436,7 +1489,7 @@ function FeaturesV3({
             {/* Formula Build Form */}
             <div className='formula-build-form'>
                 {rows.length > 0 ? (
-                    rows.map(row => renderRow(row))
+                    rows.map((row, index) => renderRow(row, false, null, index))
                 ) : (
                     <div style={{ 
                         padding: '40px', 
