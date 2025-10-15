@@ -947,8 +947,32 @@ function FeaturesV3({
         
         try {
             const dbData = prepareEnhancedDataForDatabase(rows);
-            console.log('💾 Rows Data for DB (Flat Structure):', JSON.stringify(dbData, null, 2));
-            console.log('📋 Database Rows Count:', dbData.length);
+            
+            // Enhance database data with formula preview for each row
+            const enhancedDbData = dbData.map(dbRow => {
+                // Find the original component row to generate its formula
+                const findRowById = (rows, id) => {
+                    for (const row of rows) {
+                        if (row.id === id) return row;
+                        const trueResult = findRowById(row.children.trueChildren, id);
+                        if (trueResult) return trueResult;
+                        const falseResult = findRowById(row.children.falseChildren, id);
+                        if (falseResult) return falseResult;
+                    }
+                    return null;
+                };
+                
+                const componentRow = findRowById(rows, dbRow.id);
+                const formula = componentRow ? generateFormula(componentRow) : 'N/A';
+                
+                return {
+                    ...dbRow,
+                    formulaPreview: formula // Add formula preview to each row
+                };
+            });
+            
+            console.log('💾 Rows Data for DB (Flat Structure):', JSON.stringify(enhancedDbData, null, 2));
+            console.log('📋 Database Rows Count:', enhancedDbData.length);
             console.log('✅ Database transformation completed successfully!');
         } catch (error) {
             console.error('❌ Error transforming to database format:', error);

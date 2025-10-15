@@ -77,6 +77,7 @@ export const dbRowToComponentRow = (dbRow) => {
         uom: dbRow.uom || 'EA',
         operation: dbRow.operation || '*',
         standardMH: dbRow.standardMH || 0,
+        rowOperator: dbRow.rowOperator || '+', // Row-level operator for combining rows
         
         // Enhanced: Support new conditionType field (FeaturesV1)
         conditionType: dbRow.conditionType || (dbRow.ifChecked ? 'IF-ELSE' : 'None'), // Migration support
@@ -118,6 +119,7 @@ export const componentRowToDbRow = (componentRow) => {
         uom: componentRow.uom,
         operation: componentRow.operation,
         standardMH: componentRow.standardMH,
+        rowOperator: componentRow.rowOperator || '+', // Row-level operator for combining rows
         
         // Enhanced: Support new conditionType field (FeaturesV1)
         conditionType: componentRow.conditionType || 'None', // New field for FeaturesV1
@@ -128,7 +130,7 @@ export const componentRowToDbRow = (componentRow) => {
         condition: componentRow.condition,
         rightType: componentRow.rightType,
         rightValue: componentRow.rightValue
-        // Note: isExpanded, hasChildren, and children are NOT saved to DB
+        // Note: isExpanded, hasChildren, children, and formula (calculated field) are NOT saved to DB
     };
 };
 
