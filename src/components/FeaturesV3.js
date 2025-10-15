@@ -1054,7 +1054,7 @@ function FeaturesV3({
                                     </Tooltip>
                                 )}
                             </div>
-                            {renderRow(child, true, index)}
+                            {renderRow(child, true, index, 0, row.conditionType)}
                         </div>
                     );
                 })}
@@ -1077,7 +1077,7 @@ function FeaturesV3({
     };
 
     // Enhanced row rendering
-    const renderRow = (row, isChild = false, childIndex = null, rowIndex = 0) => (
+    const renderRow = (row, isChild = false, childIndex = null, rowIndex = 0, parentConditionType = null) => (
         <div key={row.id} className={isChild ? 'custom-child-row' : 'row'}>
             <div className='custom-row border-bottom'>
                 
@@ -1126,8 +1126,8 @@ function FeaturesV3({
                     </div>
                 )}
 
-                {/* Row Operator for child rows (not first child) */}
-                {isChild && childIndex > 0 && (
+                {/* Row Operator for child rows (not first child, and not LOOKUP children) */}
+                {isChild && childIndex > 0 && parentConditionType !== 'LOOKUP' && (
                     <div className='col-block w60'>
                         <FormControl variant="outlined" size="small" fullWidth>
                             <InputLabel>Row Op</InputLabel>
