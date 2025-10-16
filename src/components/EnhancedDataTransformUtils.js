@@ -90,6 +90,11 @@ export const dbRowToComponentRow = (dbRow) => {
         rightType: dbRow.rightType || 'PARAM ID',
         rightValue: dbRow.rightValue || '',
         
+        // NEW FIELDS FOR LOOKUP TYPED PARAMETERS (FeaturesV3)
+        lookupParamType: dbRow.lookupParamType || 'Param ID',
+        lookupParamValue: dbRow.lookupParamValue || '',
+        lookupParamDesc: dbRow.lookupParamDesc || '',
+        
         // UI-only fields (derived, not from DB)
         isExpanded: (dbRow.conditionType && dbRow.conditionType !== 'None') || dbRow.ifChecked || false,
         hasChildren: (dbRow.conditionType && dbRow.conditionType !== 'None') || dbRow.ifChecked || false,
@@ -129,7 +134,13 @@ export const componentRowToDbRow = (componentRow) => {
         leftValue: componentRow.leftValue,
         ifCondition: componentRow.ifCondition,
         rightType: componentRow.rightType,
-        rightValue: componentRow.rightValue
+        rightValue: componentRow.rightValue,
+        
+        // NEW FIELDS FOR LOOKUP TYPED PARAMETERS (FeaturesV3)
+        lookupParamType: componentRow.lookupParamType || 'Param ID',
+        lookupParamValue: componentRow.lookupParamValue || '',
+        lookupParamDesc: componentRow.lookupParamDesc || ''
+        
         // Note: isExpanded, hasChildren, children, and formula (calculated field) are NOT saved to DB
     };
 };

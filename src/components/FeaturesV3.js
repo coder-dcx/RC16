@@ -133,6 +133,28 @@ function FeaturesV3({
     const conditionOptions = ['=', '>', '<', '<>'];
     const typeOptions = ['PARAM ID', 'NUMBER', 'TEXT'];
 
+    // ML_CODE options for LOOKUP parameters
+    const mlCodeOptions = [
+        { value: 'ML_CODE', label: '{ML_CODE}', description: 'Default ML Code' },
+        { value: 'ML_CODE1', label: '{ML_CODE1}', description: 'ML Code 1' },
+        { value: 'ML_CODE2', label: '{ML_CODE2}', description: 'ML Code 2' },
+        { value: 'CHAMBERS', label: '{CHAMBERS}', description: 'Chambers Code' },
+        { value: 'ml_code', label: '{ml_code}', description: 'Lowercase ML Code' }
+    ];
+
+    // Variable options for LOOKUP parameters
+    const variableOptions = [
+        { value: 'HP_SEP', label: 'HP_SEP', description: 'High Pressure Separator' },
+        { value: 'HP_TURBO', label: 'HP_TURBO', description: 'High Pressure Turbine' },
+        { value: 'PP_PPM_TUBE', label: 'PP_PPM_TUBE', description: 'PPM Tube Variable' },
+        { value: 'SEPARATOR_COST', label: 'SEPARATOR_COST', description: 'Separator Cost Variable' },
+        { value: 'RATE', label: 'RATE', description: 'Rate Variable' },
+        { value: 'INSTRUMENTS', label: 'INSTRUMENTS', description: 'Instruments Variable' },
+        { value: 'RANGE', label: 'RANGE', description: 'Range Variable' },
+        { value: 'FIN_TUBE_CO_RANGE', label: 'FIN_TUBE_CO_RANGE', description: 'Fin Tube CO Range' },
+        { value: 'FIN_TUBE_SCR_RANGE', label: 'FIN_TUBE_SCR_RANGE', description: 'Fin Tube SCR Range' }
+    ];
+
     const finalParamOptions = paramIdOptions.length > 0 ? paramIdOptions : defaultParamOptions;
     const finalUomOptions = uomOptions.length > 0 ? uomOptions : defaultUomOptions;
 
@@ -173,22 +195,54 @@ function FeaturesV3({
         }
     }, [initialRows]);
 
-    // Validation functions - Updated for LOOKUP
-    const validateRow = (row, errors = {}, path = '') => {
+    // Validation functions - Updated for LOOKUP and IF/IF-ELSE children
+    const validateRow = (row, errors = {}, path = '', parentCondition = null) => {
         const rowPath = path || row.id;
         
-        // Validate Param ID
-        if (!row.paramId || row.paramId.trim() === '') {
-            errors[`${rowPath}.paramId`] = 'Param ID is required';
+        // Check if this is a LOOKUP child (has lookupParamType field)
+        const isLookupChild = row.hasOwnProperty('lookupParamType');
+        
+        if (isLookupChild) {
+            // ===== VALIDATION FOR LOOKUP CHILDREN =====
+            // Validate Param Type
+            if (!row.lookupParamType || row.lookupParamType.trim() === '') {
+                errors[`${rowPath}.lookupParamType`] = 'Param Type is required';
+            }
+            
+            // Validate Param Value (except for Nested LOOKUP which uses button)
+            if (row.lookupParamType !== 'Nested LOOKUP') {
+                if (!row.lookupParamValue || row.lookupParamValue.trim() === '') {
+                    errors[`${rowPath}.lookupParamValue`] = 'Param Value is required';
+                }
+            }
+            
+            // Validate Comment
+            if (!row.userComments || row.userComments.trim() === '') {
+                errors[`${rowPath}.userComments`] = 'Comment is required';
+            }
+            
+            // No other validation needed for LOOKUP children
+            return errors;
         }
         
-        // Validate Comment
+        // Check if this is a child of IF/IF-ELSE (their operation/standardMh are disabled)
+        const isIfElseChild = parentCondition === 'IF' || parentCondition === 'IF-ELSE';
+        
+        // ===== VALIDATION FOR REGULAR ROWS =====
+        // Validate Param ID (NOT required for LOOKUP parent - data comes from children)
+        if (row.conditionType !== 'LOOKUP') {
+            if (!row.paramId || row.paramId.trim() === '') {
+                errors[`${rowPath}.paramId`] = 'Param ID is required';
+            }
+        }
+        
+        // Validate Comment (required for all rows)
         if (!row.userComments || row.userComments.trim() === '') {
             errors[`${rowPath}.userComments`] = 'Comment is required';
         }
         
-        // None or LOOKUP: Validate basic fields
-        if (row.conditionType === 'None' || row.conditionType === 'LOOKUP') {
+        // None: Validate basic fields (BUT NOT for IF/IF-ELSE children where fields are disabled)
+        if (row.conditionType === 'None' && !isIfElseChild) {
             if (!row.uom || row.uom.trim() === '') {
                 errors[`${rowPath}.uom`] = 'UOM is required';
             }
@@ -219,12 +273,11 @@ function FeaturesV3({
                     }
                 }
             }
-            
-            // LOOKUP specific: Validate it has at least 3 parameters
-            if (row.conditionType === 'LOOKUP') {
-                if (!row.children?.trueChildren || row.children.trueChildren.length < 3) {
-                    errors[`${rowPath}.children`] = 'LOOKUP requires at least 3 parameters';
-                }
+        } else if (row.conditionType === 'LOOKUP') {
+            // LOOKUP specific: Only validate it has at least 3 parameters
+            // No need to validate operation/standardMh as they're not used
+            if (!row.children?.trueChildren || row.children.trueChildren.length < 3) {
+                errors[`${rowPath}.children`] = 'LOOKUP requires at least 3 parameters';
             }
         } else if (row.conditionType === 'IF' || row.conditionType === 'IF-ELSE') {
             // Validate conditional fields
@@ -245,17 +298,17 @@ function FeaturesV3({
             }
         }
         
-        // Validate children recursively
+        // Validate children recursively - pass parent condition type
         if (row.conditionType === 'IF' || row.conditionType === 'IF-ELSE' || row.conditionType === 'LOOKUP') {
             if (row.children.trueChildren && row.children.trueChildren.length > 0) {
                 row.children.trueChildren.forEach((child, index) => {
-                    validateRow(child, errors, `${rowPath}.true.${index}`);
+                    validateRow(child, errors, `${rowPath}.true.${index}`, row.conditionType);
                 });
             }
             
             if (row.conditionType === 'IF-ELSE' && row.children.falseChildren && row.children.falseChildren.length > 0) {
                 row.children.falseChildren.forEach((child, index) => {
-                    validateRow(child, errors, `${rowPath}.false.${index}`);
+                    validateRow(child, errors, `${rowPath}.false.${index}`, row.conditionType);
                 });
             }
         }
@@ -348,6 +401,12 @@ function FeaturesV3({
         ifCondition: '==',
         rightType: 'PARAM ID',
         rightValue: '',
+        
+        // NEW FIELDS FOR LOOKUP TYPED PARAMETERS
+        lookupParamType: 'Param ID', // Type: Param ID | String | Number | Variable | ML_CODE | Nested LOOKUP
+        lookupParamValue: '', // The actual value(s) - can be comma-separated for multi-select
+        lookupParamDesc: '', // Description specific to this lookup parameter
+        
         children: {
             trueChildren: [],
             falseChildren: []
@@ -377,6 +436,13 @@ function FeaturesV3({
                         row.description = selectedParam.description || '';
                     }
                 }
+                
+                // CRITICAL FIX: Mark parent for re-render when LOOKUP param type or value changes
+                // This ensures formula preview updates immediately
+                if (field === 'lookupParamType' || field === 'lookupParamValue') {
+                    console.log(`🔄 LOOKUP parameter changed (${field}), parent will be updated`);
+                }
+                
                 return true;
             }
             
@@ -635,90 +701,96 @@ function FeaturesV3({
                 return `${paramDisplay} ${operation} ${standardMh}`;
             }
         } else if (row.conditionType === 'LOOKUP') {
-            // LOOKUP formula: All children are parameters for the LOOKUP function
+            // ===== ENHANCED LOOKUP FORMULA GENERATION - Typed Parameters =====
             const children = row.children?.trueChildren || [];
             
             if (children.length === 0) {
                 return 'LOOKUP(NO_PARAMS)';
             }
             
-            // Build LOOKUP with all child parameters
+            // Build LOOKUP with all child parameters using new typed system
             const params = children.map((child, index) => {
                 console.log(`🔍 LOOKUP Param ${index + 1}:`, {
                     id: child.id,
-                    paramId: child.paramId,
-                    operation: child.operation,
-                    standardMh: child.standardMh,
+                    lookupParamType: child.lookupParamType,
+                    lookupParamValue: child.lookupParamValue,
                     conditionType: child.conditionType
                 });
                 
-                // If child has its own ifCondition (IF, IF-ELSE, nested LOOKUP), generate its formula recursively
+                // If child has its own conditionType (nested LOOKUP), generate its formula recursively
                 if (child.conditionType && child.conditionType !== 'None') {
                     const formula = generateFormula(child);
                     console.log(`  ➜ Nested formula for Param ${index + 1}:`, formula);
                     return formula;
                 }
                 
-                // For 'None' ifCondition children, generate their basic formula
-                if (!child.paramId || child.paramId.trim() === '') {
-                    console.log(`  ➜ Param ${index + 1}: No paramId, returning PARAM`);
+                // Use new typed parameter system
+                const paramType = child.lookupParamType || 'Param ID';
+                const paramValue = child.lookupParamValue || '';
+                
+                if (!paramValue || paramValue.trim() === '') {
+                    console.log(`  ➜ Param ${index + 1}: No value, returning PARAM`);
                     return 'PARAM';
                 }
                 
-                // Check if it's a text/string value (contains quotes or text)
-                const paramValue = child.paramId;
-                
-                // If it looks like a number parameter ID, wrap in brackets
-                if (/^\d+$/.test(paramValue)) {
-                    // Check if there's an operation and standardMh
-                    const standardMh = String(child.standardMh || '');
-                    const operation = child.operation || '*';
+                // Generate formula based on parameter type
+                switch (paramType) {
+                    case 'Param ID': {
+                        // Handle single or multiple Param IDs
+                        const ids = paramValue.split(',').map(id => id.trim()).filter(id => id);
+                        if (ids.length === 0) {
+                            return 'PARAM';
+                        } else if (ids.length === 1) {
+                            // Single ID: [15080]
+                            const result = `[${ids[0]}]`;
+                            console.log(`  ➜ Single Param ID: ${result}`);
+                            return result;
+                        } else {
+                            // Multiple IDs: [15080][15081][15082]
+                            const result = ids.map(id => `[${id}]`).join('');
+                            console.log(`  ➜ Multiple Param IDs: ${result}`);
+                            return result;
+                        }
+                    }
                     
-                    if (operation === 'Number' || operation === 'String') {
-                        if (!standardMh || standardMh.trim() === '') {
-                            return operation === 'Number' ? '0' : 'EMPTY_STRING';
-                        }
-                        return standardMh;
-                    } else {
-                        // For LOOKUP parameters, include the operation and standardMh if present
-                        if (!standardMh || standardMh.trim() === '') {
-                            console.log(`  ➜ No standardMh, returning [${paramValue}]`);
-                            return `[${paramValue}]`;
-                        }
-                        // Only skip operation if standardMh is explicitly 0
-                        if (standardMh === '0') {
-                            console.log(`  ➜ standardMh=0, returning [${paramValue}]`);
-                            return `[${paramValue}]`;
-                        }
-                        // Always show the operation and value for LOOKUP parameters (even * 1)
-                        const result = `[${paramValue}] ${operation} ${standardMh}`;
-                        console.log(`  ➜ Returning: ${result}`);
+                    case 'String': {
+                        // String with quotes: 'HRSG_FIXED_MATL_COST'
+                        const result = `'${paramValue}'`;
+                        console.log(`  ➜ String: ${result}`);
                         return result;
                     }
+                    
+                    case 'Number': {
+                        // Plain number: 10.3
+                        console.log(`  ➜ Number: ${paramValue}`);
+                        return paramValue;
+                    }
+                    
+                    case 'Variable': {
+                        // Uppercase variable: HP_SEP
+                        console.log(`  ➜ Variable: ${paramValue}`);
+                        return paramValue;
+                    }
+                    
+                    case 'ML_CODE': {
+                        // ML_CODE with braces: {ML_CODE}
+                        const result = `{${paramValue}}`;
+                        console.log(`  ➜ ML_CODE: ${result}`);
+                        return result;
+                    }
+                    
+                    case 'Nested LOOKUP': {
+                        // Nested LOOKUP - will be handled by recursive conditionType check above
+                        console.log(`  ➜ Nested LOOKUP: LOOKUP(...)`);
+                        return 'LOOKUP(...)';
+                    }
+                    
+                    default: {
+                        // Fallback: treat as text and add quotes
+                        console.log(`  ➜ Unknown type, treating as string: '${paramValue}'`);
+                        return `'${paramValue}'`;
+                    }
                 }
-                
-                // If it contains brackets already, use as-is
-                if (paramValue.startsWith('[') && paramValue.endsWith(']')) {
-                    return paramValue;
-                }
-                
-                // If it's a string literal (starts with quote), use as-is
-                if (paramValue.startsWith("'") || paramValue.startsWith('"')) {
-                    return paramValue;
-                }
-                
-                // If it looks like a variable name (uppercase letters, underscores)
-                if (/^[A-Z_]+$/.test(paramValue)) {
-                    return paramValue;
-                }
-                
-                // If it contains curly braces (like {ML_CODE}), use as-is
-                if (paramValue.includes('{') && paramValue.includes('}')) {
-                    return paramValue;
-                }
-                
-                // Default: treat as text and add quotes
-                return `'${paramValue}'`;
             });
             
             return `LOOKUP(${params.join(', ')})`;
@@ -1145,71 +1217,273 @@ function FeaturesV3({
                     </div>
                 )}
 
-                {/* Param ID - Searchable */}
-                <div className='col-block'>
-                    <Autocomplete
-                        value={finalParamOptions.find(option => option.value === row.paramId) || null}
-                        onChange={(event, newValue) => {
-                            updateRow(row.id, 'paramId', newValue ? newValue.value : '');
-                        }}
-                        options={finalParamOptions}
-                        getOptionLabel={(option) => option.label || ''}
-                        getOptionSelected={(option, value) => option.value === value.value}
-                        size="small"
-                        renderInput={(params) => (
-                            <TextField
-                                {...params}
-                                label="Param ID"
-                                variant="outlined"
-                                error={hasFieldError(row, 'paramId')}
-                                placeholder="Search Param ID..."
-                            />
-                        )}
-                        renderOption={(option) => (
-                            <div>
-                                <strong>{option.label}</strong>
-                                {option.description && (
-                                    <div style={{ fontSize: '0.8em', color: '#666' }}>
-                                        {option.description}
-                                    </div>
-                                )}
+                {/* CONDITIONAL RENDERING: LOOKUP Children vs Standard Rows */}
+                {parentConditionType === 'LOOKUP' ? (
+                    // ===== LOOKUP CHILDREN - Typed Parameter System =====
+                    <>
+                        {/* Parameter Type Selector */}
+                        <div className='col-block w120'>
+                            <FormControl variant="outlined" size="small" fullWidth>
+                                <InputLabel>Param Type</InputLabel>
+                                <Select
+                                    value={row.lookupParamType || 'Param ID'}
+                                    onChange={(e) => {
+                                        const newType = e.target.value;
+                                        updateRow(row.id, 'lookupParamType', newType);
+                                        // Clear value when type changes
+                                        updateRow(row.id, 'lookupParamValue', '');
+                                    }}
+                                    label="Param Type"
+                                >
+                                    <MenuItem value="Param ID">Param ID</MenuItem>
+                                    <MenuItem value="String">String</MenuItem>
+                                    <MenuItem value="Number">Number</MenuItem>
+                                    <MenuItem value="Variable">Variable</MenuItem>
+                                    <MenuItem value="ML_CODE">ML_CODE</MenuItem>
+                                    <MenuItem value="Nested LOOKUP">Nested LOOKUP</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </div>
+
+                        {/* Conditional Input Based on Type */}
+                        {(!row.lookupParamType || row.lookupParamType === 'Param ID') && (
+                            <div className='col-block w150'>
+                                <Autocomplete
+                                    multiple
+                                    value={(row.lookupParamValue || '').split(',').filter(v => v).map(v => 
+                                        finalParamOptions.find(opt => opt.value === v.trim()) || null
+                                    ).filter(v => v !== null)}
+                                    onChange={(event, newValues) => {
+                                        const valueString = newValues.map(v => v.value).join(',');
+                                        updateRow(row.id, 'lookupParamValue', valueString);
+                                    }}
+                                    options={finalParamOptions}
+                                    getOptionLabel={(option) => option.label || ''}
+                                    size="small"
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Param ID(s)"
+                                            variant="outlined"
+                                            placeholder="Select one or more..."
+                                        />
+                                    )}
+                                    renderOption={(option) => (
+                                        <div>
+                                            <strong>{option.label}</strong>
+                                            {option.description && (
+                                                <div style={{ fontSize: '0.8em', color: '#666' }}>
+                                                    {option.description}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    noOptionsText="No matching Param ID found"
+                                />
                             </div>
                         )}
-                        noOptionsText="No matching Param ID found"
-                        clearOnEscape
-                        openOnFocus
-                    />
-                </div>
 
-                {/* Param Description */}
-                <div className='col-block w200'>
-                    <TextField
-                        label="Param Description"
-                        value={row.description}
-                        variant="outlined"
-                        size="small"
-                        disabled
-                    />
-                </div>
+                        {row.lookupParamType === 'String' && (
+                            <div className='col-block w150'>
+                                <TextField
+                                    label="String Value"
+                                    value={row.lookupParamValue || ''}
+                                    onChange={(e) => {
+                                        // Allow A-Z, a-z, 0-9, underscore
+                                        const value = e.target.value;
+                                        if (/^[A-Za-z0-9_]*$/.test(value)) {
+                                            updateRow(row.id, 'lookupParamValue', value);
+                                        }
+                                    }}
+                                    variant="outlined"
+                                    size="small"
+                                    placeholder="e.g., HRSG_FIXED_MATL_COST"
+                                    fullWidth
+                                />
+                            </div>
+                        )}
 
-                {/* UOM - Disabled for IF/IF-ELSE */}
-                <div className='col-block'>
-                    <Autocomplete
-                        value={finalUomOptions.find(option => option.value === row.uom) || null}
-                        onChange={(event, newValue) => {
-                            updateRow(row.id, 'uom', newValue ? newValue.value : '');
-                        }}
-                        options={finalUomOptions}
-                        getOptionLabel={(option) => option.label || ''}
-                        getOptionSelected={(option, value) => option.value === value.value}
-                        size="small"
-                        disabled={row.conditionType === 'IF' || row.conditionType === 'IF-ELSE'}
-                        renderInput={(params) => (
+                        {row.lookupParamType === 'Number' && (
+                            <div className='col-block w150'>
+                                <TextField
+                                    label="Number Value"
+                                    type="number"
+                                    value={row.lookupParamValue || ''}
+                                    onChange={(e) => updateRow(row.id, 'lookupParamValue', e.target.value)}
+                                    variant="outlined"
+                                    size="small"
+                                    placeholder="e.g., 10.3"
+                                    fullWidth
+                                />
+                            </div>
+                        )}
+
+                        {row.lookupParamType === 'Variable' && (
+                            <div className='col-block w150'>
+                                <Autocomplete
+                                    value={variableOptions.find(opt => opt.value === row.lookupParamValue) || null}
+                                    onChange={(event, newValue) => {
+                                        updateRow(row.id, 'lookupParamValue', newValue ? newValue.value : '');
+                                    }}
+                                    options={variableOptions}
+                                    getOptionLabel={(option) => option.label || ''}
+                                    size="small"
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Variable"
+                                            variant="outlined"
+                                            placeholder="Select variable..."
+                                        />
+                                    )}
+                                    renderOption={(option) => (
+                                        <div>
+                                            <strong>{option.label}</strong>
+                                            {option.description && (
+                                                <div style={{ fontSize: '0.8em', color: '#666' }}>
+                                                    {option.description}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    noOptionsText="No matching variable found"
+                                />
+                            </div>
+                        )}
+
+                        {row.lookupParamType === 'ML_CODE' && (
+                            <div className='col-block w150'>
+                                <Autocomplete
+                                    value={mlCodeOptions.find(opt => opt.value === row.lookupParamValue) || null}
+                                    onChange={(event, newValue) => {
+                                        updateRow(row.id, 'lookupParamValue', newValue ? newValue.value : '');
+                                    }}
+                                    options={mlCodeOptions}
+                                    getOptionLabel={(option) => option.label || ''}
+                                    size="small"
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="ML Code"
+                                            variant="outlined"
+                                            placeholder="Select ML code..."
+                                        />
+                                    )}
+                                    renderOption={(option) => (
+                                        <div>
+                                            <strong>{option.label}</strong>
+                                            {option.description && (
+                                                <div style={{ fontSize: '0.8em', color: '#666' }}>
+                                                    {option.description}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    noOptionsText="No matching ML code found"
+                                />
+                            </div>
+                        )}
+
+                        {row.lookupParamType === 'Nested LOOKUP' && (
+                            <div className='col-block w150'>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    color="primary"
+                                    onClick={() => {
+                                        alert('Nested LOOKUP configuration coming soon!\nFor now, you can manually enter LOOKUP formula in comments.');
+                                    }}
+                                    fullWidth
+                                >
+                                    Configure Nested LOOKUP
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* Comments - Single field for LOOKUP children */}
+                        <div className='col-block w250'>
                             <TextField
-                                {...params}
-                                label="UOM"
+                                label="Comments"
+                                value={row.userComments || ''}
+                                onChange={(e) => updateRow(row.id, 'userComments', e.target.value)}
                                 variant="outlined"
-                                error={hasFieldError(row, 'uom')}
+                                size="small"
+                                placeholder="Add comments here..."
+                                fullWidth
+                            />
+                        </div>
+                    </>
+                ) : (
+                    // ===== STANDARD ROWS (Non-LOOKUP children) =====
+                    <>
+                        {/* Param ID - Searchable */}
+                        <div className='col-block'>
+                            <Autocomplete
+                                value={finalParamOptions.find(option => option.value === row.paramId) || null}
+                                onChange={(event, newValue) => {
+                                    updateRow(row.id, 'paramId', newValue ? newValue.value : '');
+                                }}
+                                options={finalParamOptions}
+                                getOptionLabel={(option) => option.label || ''}
+                                getOptionSelected={(option, value) => option.value === value.value}
+                                size="small"
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Param ID"
+                                        variant="outlined"
+                                        error={hasFieldError(row, 'paramId')}
+                                        placeholder="Search Param ID..."
+                                    />
+                                )}
+                                renderOption={(option) => (
+                                    <div>
+                                        <strong>{option.label}</strong>
+                                        {option.description && (
+                                            <div style={{ fontSize: '0.8em', color: '#666' }}>
+                                                {option.description}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                noOptionsText="No matching Param ID found"
+                                clearOnEscape
+                                openOnFocus
+                            />
+                        </div>
+
+                        {/* Param Description */}
+                        <div className='col-block w200'>
+                            <TextField
+                                label="Param Description"
+                                value={row.description}
+                                variant="outlined"
+                                size="small"
+                                disabled
+                            />
+                        </div>
+                    </>
+                )}
+
+                {/* UOM - Hidden for LOOKUP children, Disabled for IF/IF-ELSE */}
+                {parentConditionType !== 'LOOKUP' && (
+                    <div className='col-block'>
+                        <Autocomplete
+                            value={finalUomOptions.find(option => option.value === row.uom) || null}
+                            onChange={(event, newValue) => {
+                                updateRow(row.id, 'uom', newValue ? newValue.value : '');
+                            }}
+                            options={finalUomOptions}
+                            getOptionLabel={(option) => option.label || ''}
+                            getOptionSelected={(option, value) => option.value === value.value}
+                            size="small"
+                            disabled={row.conditionType === 'IF' || row.conditionType === 'IF-ELSE'}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="UOM"
+                                    variant="outlined"
+                                    error={hasFieldError(row, 'uom')}
                                 placeholder="Search UOM..."
                             />
                         )}
@@ -1217,10 +1491,12 @@ function FeaturesV3({
                         clearOnEscape
                         openOnFocus
                     />
-                </div>
+                    </div>
+                )}
 
-                {/* Operation - Disabled for IF/IF-ELSE */}
-                <div className='col-block'>
+                {/* Operation - Hidden for LOOKUP children, Disabled for IF/IF-ELSE */}
+                {parentConditionType !== 'LOOKUP' && (
+                    <div className='col-block'>
                     <Autocomplete
                         value={operationOptions.find(op => op === row.operation) || null}
                         onChange={(event, newValue) => {
@@ -1250,10 +1526,12 @@ function FeaturesV3({
                         clearOnEscape
                         openOnFocus
                     />
-                </div>
+                    </div>
+                )}
 
-                {/* Standard MH/UOM */}
-                <div className='col-block'>
+                {/* Standard MH/UOM - Hidden for LOOKUP children */}
+                {parentConditionType !== 'LOOKUP' && (
+                    <div className='col-block'>
                     <TextField
                         label="Standard MH/UOM"
                         type="text"
@@ -1290,29 +1568,32 @@ function FeaturesV3({
                             "e.g. 10, (2+3)*4, 15.5"
                         }
                     />
-                </div>
+                    </div>
+                )}
 
-                {/* CONDITION TYPE DROPDOWN - Now includes LOOKUP */}
-                <div className='col-block w120'>
-                    <FormControl 
-                        variant="outlined" 
-                        size="small"
-                        error={hasFieldError(row, 'conditionType')}
-                    >
-                        <InputLabel error={hasFieldError(row, 'conditionType')}>Condition</InputLabel>
-                        <Select
-                            value={row.conditionType || 'None'}
-                            onChange={(e) => handleConditionTypeChange(row.id, e.target.value)}
-                            label="Condition"
+                {/* CONDITION TYPE DROPDOWN - Hidden for LOOKUP children */}
+                {parentConditionType !== 'LOOKUP' && (
+                    <div className='col-block w120'>
+                        <FormControl 
+                            variant="outlined" 
+                            size="small"
                             error={hasFieldError(row, 'conditionType')}
                         >
-                            <MenuItem value="None">None</MenuItem>
-                            <MenuItem value="IF">IF</MenuItem>
-                            <MenuItem value="IF-ELSE">IF-ELSE</MenuItem>
-                            <MenuItem value="LOOKUP">LOOKUP</MenuItem>
-                        </Select>
-                    </FormControl>
-                </div>
+                            <InputLabel error={hasFieldError(row, 'conditionType')}>Condition</InputLabel>
+                            <Select
+                                value={row.conditionType || 'None'}
+                                onChange={(e) => handleConditionTypeChange(row.id, e.target.value)}
+                                label="Condition"
+                                error={hasFieldError(row, 'conditionType')}
+                            >
+                                <MenuItem value="None">None</MenuItem>
+                                <MenuItem value="IF">IF</MenuItem>
+                                <MenuItem value="IF-ELSE">IF-ELSE</MenuItem>
+                                <MenuItem value="LOOKUP">LOOKUP</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </div>
+                )}
 
                 {/* Conditional Fields - Only for IF/IF-ELSE */}
                 {(row.conditionType === 'IF' || row.conditionType === 'IF-ELSE') && (
@@ -1392,22 +1673,26 @@ function FeaturesV3({
                     </>
                 )}
 
-                {/* Formula Preview */}
-                <div className='col-block formula-preview' key={`formula-${row.id}-${row.lastUpdated || 0}`}>
-                    <span>{generateFormula(row)}</span>
-                </div>
+                {/* Formula Preview - Hidden for LOOKUP children as they have it inline */}
+                {parentConditionType !== 'LOOKUP' && (
+                    <div className='col-block formula-preview' key={`formula-${row.id}-${row.lastUpdated || 0}`}>
+                        <span>{generateFormula(row)}</span>
+                    </div>
+                )}
 
-                {/* Comment */}
-                <div className='col-block w200'>
-                    <TextField
-                        label="Comment"
-                        value={row.userComments}
-                        onChange={(e) => updateRow(row.id, 'userComments', e.target.value)}
-                        variant="outlined"
-                        size="small"
-                        error={hasFieldError(row, 'userComments')}
-                    />
-                </div>
+                {/* Comment - Hidden for LOOKUP children as they already have Comments field above */}
+                {parentConditionType !== 'LOOKUP' && (
+                    <div className='col-block w200'>
+                        <TextField
+                            label="Comment"
+                            value={row.userComments}
+                            onChange={(e) => updateRow(row.id, 'userComments', e.target.value)}
+                            variant="outlined"
+                            size="small"
+                            error={hasFieldError(row, 'userComments')}
+                        />
+                    </div>
+                )}
 
                 {/* Delete Button */}
                 {!isChild && (
