@@ -217,10 +217,7 @@ function FeaturesV3({
                 }
             }
             
-            // Validate Comment
-            if (!row.userComments || row.userComments.trim() === '') {
-                errors[`${rowPath}.userComments`] = 'Comment is required';
-            }
+            // Comment is now optional for LOOKUP children - no validation required
             
             // No other validation needed for LOOKUP children
             return errors;
@@ -238,22 +235,18 @@ function FeaturesV3({
             }
         }
         
-        // Validate Comment (required for all rows)
-        if (!row.userComments || row.userComments.trim() === '') {
-            errors[`${rowPath}.userComments`] = 'Comment is required';
-        }
+        // Comment is now optional - no validation required
         
         // None: Validate basic fields (BUT NOT for IF/IF-ELSE children where fields are disabled)
         if (row.conditionType === 'None' && !isIfElseChild) {
-            if (!row.uom || row.uom.trim() === '') {
-                errors[`${rowPath}.uom`] = 'UOM is required';
-            }
+            // UOM is now optional - no validation required
+            
             if (!row.operation || row.operation.trim() === '') {
                 errors[`${rowPath}.operation`] = 'Operation is required';
             }
-            if (row.standardMh === null || row.standardMh === undefined || row.standardMh === '') {
-                errors[`${rowPath}.standardMh`] = 'Standard MH/UOM is required';
-            } else {
+            
+            // Standard MH is now optional - only validate format if provided
+            if (row.standardMh !== null && row.standardMh !== undefined && row.standardMh !== '') {
                 const operation = row.operation;
                 if (operation === 'Number') {
                     const mathRegex = /^[0-9+\-*/.()]+$/;
@@ -1261,6 +1254,30 @@ function FeaturesV3({
                     </div>
                 )}
 
+                {/* CONDITION TYPE DROPDOWN - Show first (before Param ID), Hidden for LOOKUP children */}
+                {parentConditionType !== 'LOOKUP' && (
+                    <div className='col-block w120'>
+                        <FormControl 
+                            variant="outlined" 
+                            size="small"
+                            error={hasFieldError(row, 'conditionType')}
+                        >
+                            <InputLabel error={hasFieldError(row, 'conditionType')}>Condition</InputLabel>
+                            <Select
+                                value={row.conditionType || 'None'}
+                                onChange={(e) => handleConditionTypeChange(row.id, e.target.value)}
+                                label="Condition"
+                                error={hasFieldError(row, 'conditionType')}
+                            >
+                                <MenuItem value="None">None</MenuItem>
+                                <MenuItem value="IF">IF</MenuItem>
+                                <MenuItem value="IF-ELSE">IF-ELSE</MenuItem>
+                                <MenuItem value="LOOKUP">LOOKUP</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </div>
+                )}
+
                 {/* CONDITIONAL RENDERING: LOOKUP Children vs Standard Rows */}
                 {parentConditionType === 'LOOKUP' ? (
                     // ===== LOOKUP CHILDREN - Typed Parameter System =====
@@ -1607,30 +1624,6 @@ function FeaturesV3({
                             "e.g. 10, (2+3)*4, 15.5"
                         }
                     />
-                    </div>
-                )}
-
-                {/* CONDITION TYPE DROPDOWN - Hidden for LOOKUP children */}
-                {parentConditionType !== 'LOOKUP' && (
-                    <div className='col-block w120'>
-                        <FormControl 
-                            variant="outlined" 
-                            size="small"
-                            error={hasFieldError(row, 'conditionType')}
-                        >
-                            <InputLabel error={hasFieldError(row, 'conditionType')}>Condition</InputLabel>
-                            <Select
-                                value={row.conditionType || 'None'}
-                                onChange={(e) => handleConditionTypeChange(row.id, e.target.value)}
-                                label="Condition"
-                                error={hasFieldError(row, 'conditionType')}
-                            >
-                                <MenuItem value="None">None</MenuItem>
-                                <MenuItem value="IF">IF</MenuItem>
-                                <MenuItem value="IF-ELSE">IF-ELSE</MenuItem>
-                                <MenuItem value="LOOKUP">LOOKUP</MenuItem>
-                            </Select>
-                        </FormControl>
                     </div>
                 )}
 
