@@ -199,18 +199,19 @@ function FeaturesV3({
     const validateRow = (row, errors = {}, path = '', parentCondition = null) => {
         const rowPath = path || row.id;
         
-        // Check if this is a LOOKUP child (has lookupParamType field)
-        const isLookupChild = row.hasOwnProperty('lookupParamType');
+        // Check if this is a LOOKUP child (parent condition is LOOKUP)
+        const isLookupChild = parentCondition === 'LOOKUP';
         
         if (isLookupChild) {
             // ===== VALIDATION FOR LOOKUP CHILDREN =====
-            // Validate Param Type
-            if (!row.lookupParamType || row.lookupParamType.trim() === '') {
+            // Validate Param Type (default to 'Param ID' if not set, matching UI behavior)
+            const paramType = row.lookupParamType || 'Param ID';
+            if (!paramType || paramType.trim() === '') {
                 errors[`${rowPath}.lookupParamType`] = 'Param Type is required';
             }
             
             // Validate Param Value (except for Nested LOOKUP which uses button)
-            if (row.lookupParamType !== 'Nested LOOKUP') {
+            if (paramType !== 'Nested LOOKUP') {
                 if (!row.lookupParamValue || row.lookupParamValue.trim() === '') {
                     errors[`${rowPath}.lookupParamValue`] = 'Param Value is required';
                 }
@@ -229,8 +230,9 @@ function FeaturesV3({
         const isIfElseChild = parentCondition === 'IF' || parentCondition === 'IF-ELSE';
         
         // ===== VALIDATION FOR REGULAR ROWS =====
-        // Validate Param ID (NOT required for LOOKUP parent - data comes from children)
-        if (row.conditionType !== 'LOOKUP') {
+        // Validate Param ID (NOT required for LOOKUP parent, IF, or IF-ELSE - they don't use param fields)
+        const needsParamId = row.conditionType === 'None' || row.conditionType === null || row.conditionType === undefined;
+        if (needsParamId) {
             if (!row.paramId || row.paramId.trim() === '') {
                 errors[`${rowPath}.paramId`] = 'Param ID is required';
             }
@@ -280,7 +282,7 @@ function FeaturesV3({
                 errors[`${rowPath}.children`] = 'LOOKUP requires at least 3 parameters';
             }
         } else if (row.conditionType === 'IF' || row.conditionType === 'IF-ELSE') {
-            // Validate conditional fields
+            // Validate conditional fields (required for IF/IF-ELSE)
             if (!row.leftType || row.leftType.trim() === '') {
                 errors[`${rowPath}.leftType`] = 'Left Type is required';
             }
@@ -296,6 +298,7 @@ function FeaturesV3({
             if (!row.rightValue || row.rightValue.trim() === '') {
                 errors[`${rowPath}.rightValue`] = 'Right Value is required';
             }
+            // Note: paramId, uom, operation, standardMh are NOT required for IF/IF-ELSE
         }
         
         // Validate children recursively - pass parent condition type
@@ -443,6 +446,34 @@ function FeaturesV3({
                     console.log(`🔄 LOOKUP parameter changed (${field}), parent will be updated`);
                 }
                 
+                // AUTO-CREATE NESTED LOOKUP: When user selects "Nested LOOKUP" type
+                if (field === 'lookupParamType' && value === 'Nested LOOKUP') {
+                    // Check if this row doesn't already have children (not already converted)
+                    if (!row.children || (row.children.trueChildren.length === 0 && row.children.falseChildren.length === 0)) {
+                        console.log(`🎯 Auto-creating Nested LOOKUP for row ${rowId} (type changed to Nested LOOKUP)`);
+                        
+                        // Convert to LOOKUP parent
+                        row.conditionType = 'LOOKUP';
+                        row.ifChecked = true;
+                        row.hasChildren = true;
+                        row.isExpanded = true;
+                        
+                        // Create 3 initial parameters for the nested LOOKUP (without pre-populated comments)
+                        const [param1Id, param2Id, param3Id] = generateMultipleIds(3);
+                        
+                        const param1 = createNewRow(param1Id, rowId, true, 0);
+                        const param2 = createNewRow(param2Id, rowId, true, 1);
+                        const param3 = createNewRow(param3Id, rowId, true, 2);
+                        
+                        row.children = {
+                            trueChildren: [param1, param2, param3],
+                            falseChildren: []
+                        };
+                        
+                        console.log(`✅ Auto-created nested LOOKUP with 3 parameters: ${param1Id}, ${param2Id}, ${param3Id}`);
+                    }
+                }
+                
                 return true;
             }
             
@@ -514,8 +545,16 @@ function FeaturesV3({
                     console.log(`🔄 Switching ifCondition type to: ${conditionType} for parent ${rowId}`);
                     
                     if (conditionType === 'IF') {
+                        // IF should have exactly 1 child in true branch, 0 in false
                         row.children.falseChildren = [];
-                        if (row.children.trueChildren.length === 0) {
+                        
+                        // If switching from LOOKUP (3+ children), keep only the first child
+                        if (row.children.trueChildren.length > 1) {
+                            console.log(`🔧 Reducing ${row.children.trueChildren.length} children to 1 for IF condition`);
+                            row.children.trueChildren = [row.children.trueChildren[0]];
+                            // Update branchIndex to 0 for the remaining child
+                            row.children.trueChildren[0].branchIndex = 0;
+                        } else if (row.children.trueChildren.length === 0) {
                             const trueChildId = generateNextId();
                             const trueChild = createNewRow(trueChildId, rowId, true, 0);
                             row.children.trueChildren = [trueChild];
@@ -533,23 +572,28 @@ function FeaturesV3({
                             console.log(`✅ Added ${neededCount} children for LOOKUP to reach 3 minimum`);
                         }
                     } else if (conditionType === 'IF-ELSE') {
-                        const needsTrue = row.children.trueChildren.length === 0;
-                        const needsFalse = row.children.falseChildren.length === 0;
-                        const childrenNeeded = (needsTrue ? 1 : 0) + (needsFalse ? 1 : 0);
+                        // IF-ELSE should have exactly 1 child in true branch, 1 in false branch
                         
-                        if (childrenNeeded > 0) {
-                            const newIds = generateMultipleIds(childrenNeeded);
-                            let idIndex = 0;
-                            
-                            if (needsTrue) {
-                                const trueChild = createNewRow(newIds[idIndex++], rowId, true, 0);
-                                row.children.trueChildren = [trueChild];
-                            }
-                            
-                            if (needsFalse) {
-                                const falseChild = createNewRow(newIds[idIndex++], rowId, false, 0);
-                                row.children.falseChildren = [falseChild];
-                            }
+                        // If switching from LOOKUP (3+ children), keep only the first child in true branch
+                        if (row.children.trueChildren.length > 1) {
+                            console.log(`🔧 Reducing ${row.children.trueChildren.length} true children to 1 for IF-ELSE condition`);
+                            row.children.trueChildren = [row.children.trueChildren[0]];
+                            row.children.trueChildren[0].branchIndex = 0;
+                        } else if (row.children.trueChildren.length === 0) {
+                            const trueChildId = generateNextId();
+                            const trueChild = createNewRow(trueChildId, rowId, true, 0);
+                            row.children.trueChildren = [trueChild];
+                        }
+                        
+                        // Ensure false branch has exactly 1 child
+                        if (row.children.falseChildren.length === 0) {
+                            const falseChildId = generateNextId();
+                            const falseChild = createNewRow(falseChildId, rowId, false, 0);
+                            row.children.falseChildren = [falseChild];
+                        } else if (row.children.falseChildren.length > 1) {
+                            console.log(`🔧 Reducing ${row.children.falseChildren.length} false children to 1`);
+                            row.children.falseChildren = [row.children.falseChildren[0]];
+                            row.children.falseChildren[0].branchIndex = 0;
                         }
                     }
                 } else if (!hasChildren) {
@@ -1384,21 +1428,7 @@ function FeaturesV3({
                             </div>
                         )}
 
-                        {row.lookupParamType === 'Nested LOOKUP' && (
-                            <div className='col-block w150'>
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    color="primary"
-                                    onClick={() => {
-                                        alert('Nested LOOKUP configuration coming soon!\nFor now, you can manually enter LOOKUP formula in comments.');
-                                    }}
-                                    fullWidth
-                                >
-                                    Configure Nested LOOKUP
-                                </Button>
-                            </div>
-                        )}
+                        {/* Button removed - Nested LOOKUP is now auto-created when type is selected */}
 
                         {/* Comments - Single field for LOOKUP children */}
                         <div className='col-block w250'>
@@ -1415,58 +1445,64 @@ function FeaturesV3({
                     </>
                 ) : (
                     // ===== STANDARD ROWS (Non-LOOKUP children) =====
-                    <>
-                        {/* Param ID - Searchable */}
-                        <div className='col-block'>
-                            <Autocomplete
-                                value={finalParamOptions.find(option => option.value === row.paramId) || null}
-                                onChange={(event, newValue) => {
-                                    updateRow(row.id, 'paramId', newValue ? newValue.value : '');
-                                }}
-                                options={finalParamOptions}
-                                getOptionLabel={(option) => option.label || ''}
-                                getOptionSelected={(option, value) => option.value === value.value}
-                                size="small"
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        label="Param ID"
-                                        variant="outlined"
-                                        error={hasFieldError(row, 'paramId')}
-                                        placeholder="Search Param ID..."
-                                    />
-                                )}
-                                renderOption={(option) => (
-                                    <div>
-                                        <strong>{option.label}</strong>
-                                        {option.description && (
-                                            <div style={{ fontSize: '0.8em', color: '#666' }}>
-                                                {option.description}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                noOptionsText="No matching Param ID found"
-                                clearOnEscape
-                                openOnFocus
-                            />
-                        </div>
+                    // Hide Param ID and Description for IF/IF-ELSE/LOOKUP rows
+                    row.conditionType !== 'IF' && row.conditionType !== 'IF-ELSE' && row.conditionType !== 'LOOKUP' && (
+                        <>
+                            {/* Param ID - Searchable */}
+                            <div className='col-block'>
+                                <Autocomplete
+                                    value={finalParamOptions.find(option => option.value === row.paramId) || null}
+                                    onChange={(event, newValue) => {
+                                        updateRow(row.id, 'paramId', newValue ? newValue.value : '');
+                                    }}
+                                    options={finalParamOptions}
+                                    getOptionLabel={(option) => option.label || ''}
+                                    getOptionSelected={(option, value) => option.value === value.value}
+                                    size="small"
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Param ID"
+                                            variant="outlined"
+                                            error={hasFieldError(row, 'paramId')}
+                                            placeholder="Search Param ID..."
+                                        />
+                                    )}
+                                    renderOption={(option) => (
+                                        <div>
+                                            <strong>{option.label}</strong>
+                                            {option.description && (
+                                                <div style={{ fontSize: '0.8em', color: '#666' }}>
+                                                    {option.description}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    noOptionsText="No matching Param ID found"
+                                    clearOnEscape
+                                    openOnFocus
+                                />
+                            </div>
 
-                        {/* Param Description */}
-                        <div className='col-block w200'>
-                            <TextField
-                                label="Param Description"
-                                value={row.description}
-                                variant="outlined"
-                                size="small"
-                                disabled
-                            />
-                        </div>
-                    </>
+                            {/* Param Description */}
+                            <div className='col-block w200'>
+                                <TextField
+                                    label="Param Description"
+                                    value={row.description}
+                                    variant="outlined"
+                                    size="small"
+                                    disabled
+                                />
+                            </div>
+                        </>
+                    )
                 )}
 
-                {/* UOM - Hidden for LOOKUP children, Disabled for IF/IF-ELSE */}
-                {parentConditionType !== 'LOOKUP' && (
+                {/* UOM - Hidden for LOOKUP children, IF, IF-ELSE, and LOOKUP parent */}
+                {parentConditionType !== 'LOOKUP' && 
+                 row.conditionType !== 'IF' && 
+                 row.conditionType !== 'IF-ELSE' && 
+                 row.conditionType !== 'LOOKUP' && (
                     <div className='col-block'>
                         <Autocomplete
                             value={finalUomOptions.find(option => option.value === row.uom) || null}
@@ -1477,7 +1513,6 @@ function FeaturesV3({
                             getOptionLabel={(option) => option.label || ''}
                             getOptionSelected={(option, value) => option.value === value.value}
                             size="small"
-                            disabled={row.conditionType === 'IF' || row.conditionType === 'IF-ELSE'}
                             renderInput={(params) => (
                                 <TextField
                                     {...params}
@@ -1494,8 +1529,11 @@ function FeaturesV3({
                     </div>
                 )}
 
-                {/* Operation - Hidden for LOOKUP children, Disabled for IF/IF-ELSE */}
-                {parentConditionType !== 'LOOKUP' && (
+                {/* Operation - Hidden for LOOKUP children, IF, IF-ELSE, and LOOKUP parent */}
+                {parentConditionType !== 'LOOKUP' && 
+                 row.conditionType !== 'IF' && 
+                 row.conditionType !== 'IF-ELSE' && 
+                 row.conditionType !== 'LOOKUP' && (
                     <div className='col-block'>
                     <Autocomplete
                         value={operationOptions.find(op => op === row.operation) || null}
@@ -1505,7 +1543,6 @@ function FeaturesV3({
                         options={operationOptions}
                         getOptionLabel={(option) => option}
                         size="small"
-                        disabled={row.conditionType === 'IF' || row.conditionType === 'IF-ELSE'}
                         renderInput={(params) => (
                             <TextField
                                 {...params}
@@ -1529,8 +1566,11 @@ function FeaturesV3({
                     </div>
                 )}
 
-                {/* Standard MH/UOM - Hidden for LOOKUP children */}
-                {parentConditionType !== 'LOOKUP' && (
+                {/* Standard MH/UOM - Hidden for LOOKUP children, IF, IF-ELSE, and LOOKUP parent */}
+                {parentConditionType !== 'LOOKUP' && 
+                 row.conditionType !== 'IF' && 
+                 row.conditionType !== 'IF-ELSE' && 
+                 row.conditionType !== 'LOOKUP' && (
                     <div className='col-block'>
                     <TextField
                         label="Standard MH/UOM"
@@ -1560,7 +1600,6 @@ function FeaturesV3({
                         }}
                         variant="outlined"
                         size="small"
-                        disabled={row.conditionType === 'IF' || row.conditionType === 'IF-ELSE'}
                         error={hasFieldError(row, 'standardMh')}
                         placeholder={
                             row.operation === 'Number' ? "e.g. 10, (2+3)*4, 15.5" :

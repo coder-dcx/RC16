@@ -107,41 +107,127 @@ export const dbRowToComponentRow = (dbRow) => {
 
 /**
  * Convert enhanced component row to database format (for saving)
+ * Enhanced to clean up irrelevant fields based on row type
  * @param {Object} componentRow - Component row object
- * @returns {Object} Database row object
+ * @param {Object} parentRow - Parent row object (to determine if child of LOOKUP)
+ * @returns {Object} Database row object with only relevant fields
  */
-export const componentRowToDbRow = (componentRow) => {
+export const componentRowToDbRow = (componentRow, parentRow = null) => {
     if (!componentRow) return null;
     
-    return {
+    // Determine if this is a LOOKUP child
+    const isLookupChild = parentRow && parentRow.conditionType === 'LOOKUP';
+    
+    // Determine if this is a LOOKUP parent
+    const isLookupParent = componentRow.conditionType === 'LOOKUP';
+    
+    // Base fields that ALL rows have
+    const baseFields = {
         id: componentIdToDbId(componentRow.id),
         parentId: componentIdToDbId(componentRow.parentId),
         branchFlag: componentRow.branchFlag,
         branchIndex: componentRow.branchIndex,
+        userComments: componentRow.userComments,
+        rowOperator: componentRow.rowOperator || '+'
+    };
+    
+    // LOOKUP CHILD: Only needs LOOKUP-specific fields
+    if (isLookupChild) {
+        return {
+            ...baseFields,
+            // LOOKUP child specific fields
+            lookupParamType: componentRow.lookupParamType || 'Param ID',
+            lookupParamValue: componentRow.lookupParamValue || '',
+            lookupParamDesc: componentRow.lookupParamDesc || '',
+            // Set regular fields to null
+            paramId: null,
+            description: null,
+            uom: null,
+            operation: null,
+            standardMh: null,
+            conditionType: 'None', // Children always have None
+            ifChecked: false,
+            leftType: null,
+            leftValue: null,
+            ifCondition: null,
+            rightType: null,
+            rightValue: null
+        };
+    }
+    
+    // LOOKUP PARENT: Doesn't need regular calculation fields
+    if (isLookupParent) {
+        return {
+            ...baseFields,
+            // LOOKUP parent has minimal fields
+            paramId: null, // Not used for LOOKUP
+            description: componentRow.description || '',
+            uom: null, // Not used
+            operation: null, // Not used
+            standardMh: null, // Not used
+            conditionType: 'LOOKUP',
+            ifChecked: true, // For UI compatibility
+            // IF fields not used
+            leftType: null,
+            leftValue: null,
+            ifCondition: null,
+            rightType: null,
+            rightValue: null,
+            // LOOKUP fields not used on parent
+            lookupParamType: null,
+            lookupParamValue: null,
+            lookupParamDesc: null
+        };
+    }
+    
+    // Determine if this is an IF or IF-ELSE row
+    const isIfElseRow = componentRow.conditionType === 'IF' || componentRow.conditionType === 'IF-ELSE';
+    
+    // IF/IF-ELSE ROW: Has IF fields but NOT param fields
+    if (isIfElseRow) {
+        return {
+            ...baseFields,
+            // Param fields are NULL for IF/IF-ELSE
+            paramId: null,
+            description: null,
+            uom: null,
+            operation: null,
+            standardMh: null,
+            conditionType: componentRow.conditionType,
+            ifChecked: true,
+            // IF fields are required
+            leftType: componentRow.leftType,
+            leftValue: componentRow.leftValue,
+            ifCondition: componentRow.ifCondition,
+            rightType: componentRow.rightType,
+            rightValue: componentRow.rightValue,
+            // LOOKUP fields not used
+            lookupParamType: null,
+            lookupParamValue: null,
+            lookupParamDesc: null
+        };
+    }
+    
+    // REGULAR NONE ROW: Has param fields but NOT IF fields
+    return {
+        ...baseFields,
         paramId: componentRow.paramId,
         description: componentRow.description,
-        userComments: componentRow.userComments,
         uom: componentRow.uom,
         operation: componentRow.operation,
         standardMh: componentRow.standardMh,
-        rowOperator: componentRow.rowOperator || '+', // Row-level operator for combining rows
-        
-        // Enhanced: Support new conditionType field (FeaturesV1)
-        conditionType: componentRow.conditionType || 'None', // New field for FeaturesV1
-        ifChecked: componentRow.ifChecked || (componentRow.conditionType && componentRow.conditionType !== 'None'), // Migration support
-        
-        leftType: componentRow.leftType,
-        leftValue: componentRow.leftValue,
-        ifCondition: componentRow.ifCondition,
-        rightType: componentRow.rightType,
-        rightValue: componentRow.rightValue,
-        
-        // NEW FIELDS FOR LOOKUP TYPED PARAMETERS (FeaturesV3)
-        lookupParamType: componentRow.lookupParamType || 'Param ID',
-        lookupParamValue: componentRow.lookupParamValue || '',
-        lookupParamDesc: componentRow.lookupParamDesc || ''
-        
-        // Note: isExpanded, hasChildren, children, and formula (calculated field) are NOT saved to DB
+        conditionType: 'None',
+        ifChecked: false,
+        // IF fields are NULL for None rows
+        leftType: null,
+        leftValue: null,
+        ifCondition: null,
+        rightType: null,
+        rightValue: null,
+        // LOOKUP fields not used for regular rows
+        lookupParamType: null,
+        lookupParamValue: null,
+        lookupParamDesc: null
     };
 };
 
@@ -240,19 +326,19 @@ export const buildEnhancedTreeFromFlatData = (dbRows) => {
 export const flattenEnhancedTreeForDatabase = (componentRows) => {
     const flatRows = [];
     
-    const flattenRecursive = (row) => {
+    const flattenRecursive = (row, parentRow = null) => {
         if (!row) return;
         
-        // Add current row to flat array
-        flatRows.push(componentRowToDbRow(row));
+        // Add current row to flat array with parent context
+        flatRows.push(componentRowToDbRow(row, parentRow));
         
-        // Recursively add all children from both branches
+        // Recursively add all children from both branches, passing current row as parent
         [...row.children.trueChildren, ...row.children.falseChildren].forEach(child => {
-            flattenRecursive(child);
+            flattenRecursive(child, row);
         });
     };
     
-    componentRows.forEach(flattenRecursive);
+    componentRows.forEach(row => flattenRecursive(row, null));
     
     return flatRows.filter(Boolean);
 };
