@@ -50,25 +50,25 @@ export const dbRowToComponentRow = (dbRow) => {
     return {
         id: dbIdToComponentId(dbRow.id),
         parentId: dbIdToComponentId(dbRow.parentId),
-        branchFlag: dbRow.branchFlag,
+        isTrueBranch: dbRow.isTrueBranch,
         paramId: dbRow.paramId || '',
-        description: dbRow.description || '',
-        userComments: dbRow.userComments || '',
+        paramDesc: dbRow.paramDesc || '',
+        moduleDesc: dbRow.moduleDesc || '',
         uom: dbRow.uom || 'EA',
         operation: dbRow.operation || '*',
-        standardMh: dbRow.standardMh || 0,
+        standardMH: dbRow.standardMH || 0,
         ifChecked: dbRow.ifChecked || false,
         
         // Conditional fields
         leftType: dbRow.leftType || 'PARAM ID',
         leftValue: dbRow.leftValue || '',
-        ifCondition: dbRow.ifCondition || '==',
+        condition: dbRow.condition || '==',
         rightType: dbRow.rightType || 'PARAM ID',
         rightValue: dbRow.rightValue || '',
         
         // UI-only fields (derived, not from DB)
-        isExpanded: dbRow.ifChecked || false, // Expand if it's an IF ifCondition
-        hasChildren: dbRow.ifChecked || false, // Has children if it's an IF ifCondition
+        isExpanded: dbRow.ifChecked || false, // Expand if it's an IF condition
+        hasChildren: dbRow.ifChecked || false, // Has children if it's an IF condition
         children: {
             trueChild: null,
             falseChild: null
@@ -87,17 +87,17 @@ export const componentRowToDbRow = (componentRow) => {
     return {
         id: componentIdToDbId(componentRow.id),
         parentId: componentIdToDbId(componentRow.parentId),
-        branchFlag: componentRow.branchFlag,
+        isTrueBranch: componentRow.isTrueBranch,
         paramId: componentRow.paramId,
-        description: componentRow.description,
-        userComments: componentRow.userComments,
+        paramDesc: componentRow.paramDesc,
+        moduleDesc: componentRow.moduleDesc,
         uom: componentRow.uom,
         operation: componentRow.operation,
-        standardMh: componentRow.standardMh,
+        standardMH: componentRow.standardMH,
         ifChecked: componentRow.ifChecked,
         leftType: componentRow.leftType,
         leftValue: componentRow.leftValue,
-        ifCondition: componentRow.ifCondition,
+        condition: componentRow.condition,
         rightType: componentRow.rightType,
         rightValue: componentRow.rightValue
         // Note: isExpanded, hasChildren, and children are NOT saved to DB
@@ -138,9 +138,9 @@ export const buildTreeFromFlatData = (dbRows) => {
             // This is a child row
             const parent = rowMap.get(currentRow.parentId);
             if (parent) {
-                if (currentRow.branchFlag === true) {
+                if (currentRow.isTrueBranch === true) {
                     parent.children.trueChild = currentRow;
-                } else if (currentRow.branchFlag === false) {
+                } else if (currentRow.isTrueBranch === false) {
                     parent.children.falseChild = currentRow;
                 }
                 
@@ -253,21 +253,21 @@ export const prepareDataForDatabase = (componentRows) => {
 // =====================================
 
 export const sampleDatabaseData = [
-    // Root row with IF ifCondition
+    // Root row with IF condition
     {
         id: 1,
         parentId: null,
-        branchFlag: null,
+        isTrueBranch: null,
         paramId: "000001",
-        description: "Engine Speed Parameter",
-        userComments: "Engine Control Module",
+        paramDesc: "Engine Speed Parameter",
+        moduleDesc: "Engine Control Module",
         uom: "RPM",
         operation: "*",
-        standardMh: 0,
+        standardMH: 0,
         ifChecked: true,
         leftType: "PARAM ID",
         leftValue: "000001",
-        ifCondition: ">",
+        condition: ">",
         rightType: "NUMBER",
         rightValue: "1000"
     },
@@ -275,17 +275,17 @@ export const sampleDatabaseData = [
     {
         id: 2,
         parentId: 1,
-        branchFlag: true,
+        isTrueBranch: true,
         paramId: "000002",
-        description: "High Speed Calculation",
-        userComments: "Performance Module",
+        paramDesc: "High Speed Calculation",
+        moduleDesc: "Performance Module",
         uom: "SEC",
         operation: "*",
-        standardMh: 25,
+        standardMH: 25,
         ifChecked: false,
         leftType: "PARAM ID",
         leftValue: "",
-        ifCondition: "==",
+        condition: "==",
         rightType: "NUMBER",
         rightValue: ""
     },
@@ -293,17 +293,17 @@ export const sampleDatabaseData = [
     {
         id: 3,
         parentId: 1,
-        branchFlag: false,
+        isTrueBranch: false,
         paramId: "000003",
-        description: "Low Speed Calculation",
-        userComments: "Economy Module",
+        paramDesc: "Low Speed Calculation",
+        moduleDesc: "Economy Module",
         uom: "SEC",
         operation: "*",
-        standardMh: 15,
+        standardMH: 15,
         ifChecked: false,
         leftType: "PARAM ID",
         leftValue: "",
-        ifCondition: "==",
+        condition: "==",
         rightType: "NUMBER",
         rightValue: ""
     },
@@ -311,17 +311,17 @@ export const sampleDatabaseData = [
     {
         id: 4,
         parentId: null,
-        branchFlag: null,
+        isTrueBranch: null,
         paramId: "000004",
-        description: "Base Calculation",
-        userComments: "Base Module",
+        paramDesc: "Base Calculation",
+        moduleDesc: "Base Module",
         uom: "MIN",
         operation: "+",
-        standardMh: 10,
+        standardMH: 10,
         ifChecked: false,
         leftType: "PARAM ID",
         leftValue: "",
-        ifCondition: "==",
+        condition: "==",
         rightType: "NUMBER",
         rightValue: ""
     }

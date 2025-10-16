@@ -69,14 +69,14 @@ export const dbRowToComponentRow = (dbRow) => {
     return {
         id: dbIdToComponentId(dbRow.id),
         parentId: dbIdToComponentId(dbRow.parentId),
-        branchFlag: dbRow.branchFlag,
+        isTrueBranch: dbRow.isTrueBranch,
         branchIndex: dbRow.branchIndex !== undefined ? dbRow.branchIndex : null,
         paramId: dbRow.paramId || '',
-        description: dbRow.description || '',
-        userComments: dbRow.userComments || '',
+        paramDesc: dbRow.paramDesc || '',
+        moduleDesc: dbRow.moduleDesc || '',
         uom: dbRow.uom || 'EA',
         operation: dbRow.operation || '*',
-        standardMh: dbRow.standardMh || 0,
+        standardMH: dbRow.standardMH || 0,
         rowOperator: dbRow.rowOperator || '+', // Row-level operator for combining rows
         
         // Enhanced: Support new conditionType field (FeaturesV1)
@@ -86,7 +86,7 @@ export const dbRowToComponentRow = (dbRow) => {
         // Conditional fields
         leftType: dbRow.leftType || 'PARAM ID',
         leftValue: dbRow.leftValue || '',
-        ifCondition: dbRow.ifCondition || '==',
+        condition: dbRow.condition || '==',
         rightType: dbRow.rightType || 'PARAM ID',
         rightValue: dbRow.rightValue || '',
         
@@ -111,14 +111,14 @@ export const componentRowToDbRow = (componentRow) => {
     return {
         id: componentIdToDbId(componentRow.id),
         parentId: componentIdToDbId(componentRow.parentId),
-        branchFlag: componentRow.branchFlag,
+        isTrueBranch: componentRow.isTrueBranch,
         branchIndex: componentRow.branchIndex,
         paramId: componentRow.paramId,
-        description: componentRow.description,
-        userComments: componentRow.userComments,
+        paramDesc: componentRow.paramDesc,
+        moduleDesc: componentRow.moduleDesc,
         uom: componentRow.uom,
         operation: componentRow.operation,
-        standardMh: componentRow.standardMh,
+        standardMH: componentRow.standardMH,
         rowOperator: componentRow.rowOperator || '+', // Row-level operator for combining rows
         
         // Enhanced: Support new conditionType field (FeaturesV1)
@@ -127,7 +127,7 @@ export const componentRowToDbRow = (componentRow) => {
         
         leftType: componentRow.leftType,
         leftValue: componentRow.leftValue,
-        ifCondition: componentRow.ifCondition,
+        condition: componentRow.condition,
         rightType: componentRow.rightType,
         rightValue: componentRow.rightValue
         // Note: isExpanded, hasChildren, children, and formula (calculated field) are NOT saved to DB
@@ -162,7 +162,7 @@ export const buildEnhancedTreeFromFlatData = (dbRows) => {
     
     componentRows.forEach(row => {
         if (row.parentId) {
-            const key = `${row.parentId}_${row.branchFlag}`;
+            const key = `${row.parentId}_${row.isTrueBranch}`;
             if (!childrenGroups.has(key)) {
                 childrenGroups.set(key, []);
             }
@@ -174,19 +174,19 @@ export const buildEnhancedTreeFromFlatData = (dbRows) => {
     
     // Step 4: Sort children by branchIndex and assign to parents
     childrenGroups.forEach((children, key) => {
-        const [parentId, branchFlag] = key.split('_');
+        const [parentId, isTrueBranch] = key.split('_');
         const parent = rowMap.get(parentId);
         
-        console.log(`🔗 Processing ${children.length} children for parent ${parentId}, branch: ${branchFlag}`);
+        console.log(`🔗 Processing ${children.length} children for parent ${parentId}, branch: ${isTrueBranch}`);
         
         if (parent) {
             // Sort children by branchIndex
             children.sort((a, b) => (a.branchIndex || 0) - (b.branchIndex || 0));
             
-            if (branchFlag === 'true') {
+            if (isTrueBranch === 'true') {
                 parent.children.trueChildren = children;
                 console.log(`✅ Added ${children.length} TRUE children to parent ${parentId}`);
-            } else if (branchFlag === 'false') {
+            } else if (isTrueBranch === 'false') {
                 parent.children.falseChildren = children;
                 console.log(`✅ Added ${children.length} FALSE children to parent ${parentId}`);
             }
@@ -306,18 +306,18 @@ export const enhancedSampleDatabaseData = [
     {
         id: 1,
         parentId: null,
-        branchFlag: null,
+        isTrueBranch: null,
         branchIndex: null,
         paramId: "000001",
-        description: "Engine Speed Parameter",
-        userComments: "Engine Control Module",
+        paramDesc: "Engine Speed Parameter",
+        moduleDesc: "Engine Control Module",
         uom: "RPM",
         operation: "*",
-        standardMh: 0,
+        standardMH: 0,
         ifChecked: true,
         leftType: "PARAM ID",
         leftValue: "000001",
-        ifCondition: ">",
+        condition: ">",
         rightType: "NUMBER",
         rightValue: "1000"
     },
@@ -326,40 +326,40 @@ export const enhancedSampleDatabaseData = [
     {
         id: 2,
         parentId: 1,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 0,
         paramId: "000002",
-        description: "High Speed Calculation 1",
-        userComments: "Performance Module 1",
+        paramDesc: "High Speed Calculation 1",
+        moduleDesc: "Performance Module 1",
         uom: "SEC",
         operation: "*",
-        standardMh: 25,
+        standardMH: 25,
         ifChecked: false
     },
     {
         id: 3,
         parentId: 1,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 1,
         paramId: "000003",
-        description: "High Speed Calculation 2",
-        userComments: "Performance Module 2",
+        paramDesc: "High Speed Calculation 2",
+        moduleDesc: "Performance Module 2",
         uom: "MIN",
         operation: "+",
-        standardMh: 15,
+        standardMH: 15,
         ifChecked: false
     },
     {
         id: 4,
         parentId: 1,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 2,
         paramId: "000004",
-        description: "High Speed Calculation 3",
-        userComments: "Performance Module 3",
+        paramDesc: "High Speed Calculation 3",
+        moduleDesc: "Performance Module 3",
         uom: "HRS",
         operation: "*",
-        standardMh: 5,
+        standardMH: 5,
         ifChecked: false
     },
     
@@ -367,27 +367,27 @@ export const enhancedSampleDatabaseData = [
     {
         id: 5,
         parentId: 1,
-        branchFlag: false,
+        isTrueBranch: false,
         branchIndex: 0,
         paramId: "000005",
-        description: "Low Speed Calculation 1",
-        userComments: "Economy Module 1",
+        paramDesc: "Low Speed Calculation 1",
+        moduleDesc: "Economy Module 1",
         uom: "SEC",
         operation: "*",
-        standardMh: 10,
+        standardMH: 10,
         ifChecked: false
     },
     {
         id: 6,
         parentId: 1,
-        branchFlag: false,
+        isTrueBranch: false,
         branchIndex: 1,
         paramId: "000006",
-        description: "Low Speed Calculation 2",
-        userComments: "Economy Module 2",
+        paramDesc: "Low Speed Calculation 2",
+        moduleDesc: "Economy Module 2",
         uom: "MIN",
         operation: "+",
-        standardMh: 8,
+        standardMH: 8,
         ifChecked: false
     },
     
@@ -398,18 +398,18 @@ export const enhancedSampleDatabaseData = [
     {
         id: 7,
         parentId: null,
-        branchFlag: null,
+        isTrueBranch: null,
         branchIndex: null,
         paramId: "000007",
-        description: "Temperature Check",
-        userComments: "Temperature Control",
+        paramDesc: "Temperature Check",
+        moduleDesc: "Temperature Control",
         uom: "TEMP",
         operation: "*",
-        standardMh: 0,
+        standardMH: 0,
         ifChecked: true,
         leftType: "PARAM ID",
         leftValue: "000007",
-        ifCondition: "<",
+        condition: "<",
         rightType: "NUMBER",
         rightValue: "50"
     },
@@ -418,18 +418,18 @@ export const enhancedSampleDatabaseData = [
     {
         id: 8,
         parentId: 7,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 0,
         paramId: "000008",
-        description: "Cold Temperature Handler",
-        userComments: "Cold Weather Module",
+        paramDesc: "Cold Temperature Handler",
+        moduleDesc: "Cold Weather Module",
         uom: "SEC",
         operation: "*",
-        standardMh: 20,
+        standardMH: 20,
         ifChecked: true, // NESTED IF: This has its own children!
         leftType: "PARAM ID",
         leftValue: "000008",
-        ifCondition: "<",
+        condition: "<",
         rightType: "NUMBER",
         rightValue: "0"
     },
@@ -438,27 +438,27 @@ export const enhancedSampleDatabaseData = [
     {
         id: 9,
         parentId: 8,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 0,
         paramId: "000009",
-        description: "Extreme Cold Calculation 1",
-        userComments: "Arctic Module 1",
+        paramDesc: "Extreme Cold Calculation 1",
+        moduleDesc: "Arctic Module 1",
         uom: "MIN",
         operation: "*",
-        standardMh: 45,
+        standardMH: 45,
         ifChecked: false
     },
     {
         id: 10,
         parentId: 8,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 1,
         paramId: "000010",
-        description: "Extreme Cold Calculation 2",
-        userComments: "Arctic Module 2",
+        paramDesc: "Extreme Cold Calculation 2",
+        moduleDesc: "Arctic Module 2",
         uom: "HRS",
         operation: "+",
-        standardMh: 30,
+        standardMH: 30,
         ifChecked: false
     },
     
@@ -466,14 +466,14 @@ export const enhancedSampleDatabaseData = [
     {
         id: 11,
         parentId: 8,
-        branchFlag: false,
+        isTrueBranch: false,
         branchIndex: 0,
         paramId: "000011",
-        description: "Normal Cold Calculation",
-        userComments: "Standard Cold Module",
+        paramDesc: "Normal Cold Calculation",
+        moduleDesc: "Standard Cold Module",
         uom: "SEC",
         operation: "*",
-        standardMh: 12,
+        standardMH: 12,
         ifChecked: false
     },
     
@@ -481,14 +481,14 @@ export const enhancedSampleDatabaseData = [
     {
         id: 13,
         parentId: 7,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 1,
         paramId: "000013",
-        description: "General Cold Processing",
-        userComments: "Base Cold Module",
+        paramDesc: "General Cold Processing",
+        moduleDesc: "Base Cold Module",
         uom: "SEC",
         operation: "+",
-        standardMh: 8,
+        standardMH: 8,
         ifChecked: false
     },
     
@@ -496,14 +496,14 @@ export const enhancedSampleDatabaseData = [
     {
         id: 12,
         parentId: 7,
-        branchFlag: false,
+        isTrueBranch: false,
         branchIndex: 0,
         paramId: "000012",
-        description: "Warm Temperature Calculation",
-        userComments: "Warm Weather Module",
+        paramDesc: "Warm Temperature Calculation",
+        moduleDesc: "Warm Weather Module",
         uom: "MIN",
         operation: "+",
-        standardMh: 5,
+        standardMH: 5,
         ifChecked: false
     },
     
@@ -514,18 +514,18 @@ export const enhancedSampleDatabaseData = [
     {
         id: 14,
         parentId: null,
-        branchFlag: null,
+        isTrueBranch: null,
         branchIndex: null,
         paramId: "000014",
-        description: "Pressure Level Check",
-        userComments: "Pressure Control System",
+        paramDesc: "Pressure Level Check",
+        moduleDesc: "Pressure Control System",
         uom: "PSI",
         operation: "*",
-        standardMh: 0,
+        standardMH: 0,
         ifChecked: true,
         leftType: "PARAM ID",
         leftValue: "000014",
-        ifCondition: ">=",
+        condition: ">=",
         rightType: "NUMBER",
         rightValue: "100"
     },
@@ -534,53 +534,53 @@ export const enhancedSampleDatabaseData = [
     {
         id: 15,
         parentId: 14,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 0,
         paramId: "000015",
-        description: "High Pressure Processing 1",
-        userComments: "Pressure Module A",
+        paramDesc: "High Pressure Processing 1",
+        moduleDesc: "Pressure Module A",
         uom: "SEC",
         operation: "*",
-        standardMh: 18,
+        standardMH: 18,
         ifChecked: false
     },
     {
         id: 16,
         parentId: 14,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 1,
         paramId: "000016",
-        description: "High Pressure Processing 2",
-        userComments: "Pressure Module B",
+        paramDesc: "High Pressure Processing 2",
+        moduleDesc: "Pressure Module B",
         uom: "MIN",
         operation: "+",
-        standardMh: 12,
+        standardMH: 12,
         ifChecked: false
     },
     {
         id: 17,
         parentId: 14,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 2,
         paramId: "000017",
-        description: "Safety Override Check",
-        userComments: "Safety System",
+        paramDesc: "Safety Override Check",
+        moduleDesc: "Safety System",
         uom: "SEC",
         operation: "*",
-        standardMh: 22,
+        standardMH: 22,
         ifChecked: false
     },
     {
         id: 18,
         parentId: 14,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 3,
         paramId: "000018",
-        description: "Pressure Relief Calculation",
-        userComments: "Relief Valve Module",
+        paramDesc: "Pressure Relief Calculation",
+        moduleDesc: "Relief Valve Module",
         uom: "HRS",
         operation: "+",
-        standardMh: 35,
+        standardMH: 35,
         ifChecked: false
     },
     
@@ -588,40 +588,40 @@ export const enhancedSampleDatabaseData = [
     {
         id: 19,
         parentId: 14,
-        branchFlag: false,
+        isTrueBranch: false,
         branchIndex: 0,
         paramId: "000019",
-        description: "Normal Pressure Operation 1",
-        userComments: "Standard Module 1",
+        paramDesc: "Normal Pressure Operation 1",
+        moduleDesc: "Standard Module 1",
         uom: "SEC",
         operation: "*",
-        standardMh: 8,
+        standardMH: 8,
         ifChecked: false
     },
     {
         id: 20,
         parentId: 14,
-        branchFlag: false,
+        isTrueBranch: false,
         branchIndex: 1,
         paramId: "000020",
-        description: "Normal Pressure Operation 2",
-        userComments: "Standard Module 2",
+        paramDesc: "Normal Pressure Operation 2",
+        moduleDesc: "Standard Module 2",
         uom: "MIN",
         operation: "+",
-        standardMh: 6,
+        standardMH: 6,
         ifChecked: false
     },
     {
         id: 21,
         parentId: 14,
-        branchFlag: false,
+        isTrueBranch: false,
         branchIndex: 2,
         paramId: "000021",
-        description: "Efficiency Optimization",
-        userComments: "Optimization Module",
+        paramDesc: "Efficiency Optimization",
+        moduleDesc: "Optimization Module",
         uom: "SEC",
         operation: "*",
-        standardMh: 4,
+        standardMH: 4,
         ifChecked: false
     },
     
@@ -632,14 +632,14 @@ export const enhancedSampleDatabaseData = [
     {
         id: 22,
         parentId: null,
-        branchFlag: null,
+        isTrueBranch: null,
         branchIndex: null,
         paramId: "000022",
-        description: "Base Calculation Module",
-        userComments: "Foundation System",
+        paramDesc: "Base Calculation Module",
+        moduleDesc: "Foundation System",
         uom: "SEC",
         operation: "*",
-        standardMh: 15,
+        standardMH: 15,
         ifChecked: false // Simple calculation, no children
     },
     
@@ -650,18 +650,18 @@ export const enhancedSampleDatabaseData = [
     {
         id: 23,
         parentId: null,
-        branchFlag: null,
+        isTrueBranch: null,
         branchIndex: null,
         paramId: "000023",
-        description: "Fuel Efficiency Check",
-        userComments: "Fuel Management System",
+        paramDesc: "Fuel Efficiency Check",
+        moduleDesc: "Fuel Management System",
         uom: "L/HR",
         operation: "*",
-        standardMh: 0,
+        standardMH: 0,
         ifChecked: true,
         leftType: "PARAM ID",
         leftValue: "000023",
-        ifCondition: "<=",
+        condition: "<=",
         rightType: "NUMBER",
         rightValue: "20"
     },
@@ -670,18 +670,18 @@ export const enhancedSampleDatabaseData = [
     {
         id: 24,
         parentId: 23,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 0,
         paramId: "000024",
-        description: "Eco Mode Processing",
-        userComments: "Economy Module",
+        paramDesc: "Eco Mode Processing",
+        moduleDesc: "Economy Module",
         uom: "SEC",
         operation: "*",
-        standardMh: 12,
+        standardMH: 12,
         ifChecked: true, // ANOTHER NESTED IF!
         leftType: "PARAM ID",
         leftValue: "000024",
-        ifCondition: "==",
+        condition: "==",
         rightType: "NUMBER",
         rightValue: "1"
     },
@@ -690,14 +690,14 @@ export const enhancedSampleDatabaseData = [
     {
         id: 25,
         parentId: 24,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 0,
         paramId: "000025",
-        description: "Maximum Efficiency Calculation",
-        userComments: "Max Efficiency Module",
+        paramDesc: "Maximum Efficiency Calculation",
+        moduleDesc: "Max Efficiency Module",
         uom: "MIN",
         operation: "+",
-        standardMh: 25,
+        standardMH: 25,
         ifChecked: false
     },
     
@@ -705,14 +705,14 @@ export const enhancedSampleDatabaseData = [
     {
         id: 26,
         parentId: 24,
-        branchFlag: false,
+        isTrueBranch: false,
         branchIndex: 0,
         paramId: "000026",
-        description: "Standard Efficiency Calculation",
-        userComments: "Standard Module",
+        paramDesc: "Standard Efficiency Calculation",
+        moduleDesc: "Standard Module",
         uom: "SEC",
         operation: "*",
-        standardMh: 15,
+        standardMH: 15,
         ifChecked: false
     },
     
@@ -720,14 +720,14 @@ export const enhancedSampleDatabaseData = [
     {
         id: 27,
         parentId: 23,
-        branchFlag: true,
+        isTrueBranch: true,
         branchIndex: 1,
         paramId: "000027",
-        description: "Fuel Conservation Protocol",
-        userComments: "Conservation System",
+        paramDesc: "Fuel Conservation Protocol",
+        moduleDesc: "Conservation System",
         uom: "HRS",
         operation: "+",
-        standardMh: 8,
+        standardMH: 8,
         ifChecked: false
     },
     
@@ -735,27 +735,27 @@ export const enhancedSampleDatabaseData = [
     {
         id: 28,
         parentId: 23,
-        branchFlag: false,
+        isTrueBranch: false,
         branchIndex: 0,
         paramId: "000028",
-        description: "High Consumption Processing",
-        userComments: "Performance Module",
+        paramDesc: "High Consumption Processing",
+        moduleDesc: "Performance Module",
         uom: "SEC",
         operation: "*",
-        standardMh: 18,
+        standardMH: 18,
         ifChecked: false
     },
     {
         id: 29,
         parentId: 23,
-        branchFlag: false,
+        isTrueBranch: false,
         branchIndex: 1,
         paramId: "000029",
-        description: "Fuel Warning System",
-        userComments: "Warning Module",
+        paramDesc: "Fuel Warning System",
+        moduleDesc: "Warning Module",
         uom: "MIN",
         operation: "+",
-        standardMh: 5,
+        standardMH: 5,
         ifChecked: false
     }
 ];

@@ -1,165 +1,113 @@
 import React, { useState, useEffect } from 'react';
-import FeaturesV3 from './FeaturesV3';
+import FeaturesV2 from './FeaturesV2';
 
 /**
- * FeaturesV3 Example Component - Combines FeaturesV1 + Dynamic LOOKUP Enhancement
+ * FeaturesV2 Example Component - Enhanced with LOOKUP and improved field organization
  * 
- * This example demonstrates FeaturesV3 capabilities:
- * 1. None - Shows Param ID, Description, UOM, Operation, Standard MH/UOM, Formula Preview, Comment
- * 2. IF - Shows conditional fields and TRUE branch only
- * 3. IF-ELSE - Shows conditional fields and both TRUE/FALSE branches
- * 4. LOOKUP - Dynamic parameters (3, 4, 5, 6, 7+). Parent has basic fields, all children are LOOKUP parameters
- *    - Supports variable parameter counts based on real-world usage
- *    - Smart formatting: [paramId] for numbers, 'TEXT' for strings, VARIABLE for uppercase, {ml_code} preserved
- *    - Examples: LOOKUP(HP_SEP, SEPARATOR_COST, [15001]) or LOOKUP([15080], PP_PPM_TUBE, [15006], {ml_code}, [15082])
+ * This example demonstrates the new FeaturesV2 capabilities:
+ * 1. Condition Type dropdown moved before Param ID: None, IF, IF-ELSE, LOOKUP
+ * 2. None - Shows Param ID, Description, UOM, Operation, Standard MH/UOM, Formula Preview, Comment
+ * 3. IF - Shows conditional fields and TRUE branch only
+ * 4. IF-ELSE - Shows conditional fields and both TRUE/FALSE branches
+ * 5. LOOKUP - Shows three parameter fields for Excel-like LOOKUP function
  */
-function FeaturesV3Example() {
-    // Sample data combining IF/IF-ELSE and LOOKUP features with dynamic parameters
+function FeaturesV2Example() {
+    // Custom data for testing - Replace this with your actual data
     const customInitialRows = [{
         "id": 1,
         "parentId": null,
-        "branchFlag": null,
+        "isTrueBranch": null,
         "branchIndex": null,
         "paramId": "17132",
         "operation": "*",
-        "standardMh": "84",
+        "standardMH": "84",
         "conditionType": "None",
-        "userComments": "Simple calculation example"
+        "comment": "Simple calculation example"
     }, {
         "id": 2,
         "parentId": null,
-        "branchFlag": null,
+        "isTrueBranch": null,
         "branchIndex": null,
         "paramId": "1000",
         "operation": "",
-        "standardMh": "",
+        "standardMH": "",
         "conditionType": "IF-ELSE",
         "leftType": "PARAM ID",
         "leftValue": "1000",
-        "ifCondition": "=",
+        "condition": "=",
         "rightType": "TEXT",
         "rightValue": "OT1.1",
-        "userComments": "IF-ELSE conditional example"
+        "comment": "Conditional logic example"
     }, {
         "id": 3,
         "parentId": 2,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 0,
         "paramId": "18910",
         "operation": "*",
-        "standardMh": "1.39",
+        "standardMH": "1.39",
         "conditionType": "None",
-        "userComments": "TRUE branch result"
+        "comment": "TRUE branch result"
     }, {
         "id": 4,
         "parentId": 2,
-        "branchFlag": false,
+        "isTrueBranch": false,
         "branchIndex": 0,
         "paramId": "18910",
         "operation": "*",
-        "standardMh": "1.05",
+        "standardMH": "1.05",
         "conditionType": "None",
-        "userComments": "FALSE branch result"
+        "comment": "FALSE branch result"
     }, {
         "id": 5,
         "parentId": null,
-        "branchFlag": null,
+        "isTrueBranch": null,
         "branchIndex": null,
         "paramId": "18920",
         "operation": "*",
-        "standardMh": "1",
+        "standardMH": "1",
         "conditionType": "LOOKUP",
-        "userComments": "LOOKUP with 3 params - LOOKUP(HP_SEP, SEPARATOR_COST, [15001])"
+        "comment": "LOOKUP parent with basic fields"
     }, {
         "id": 6,
         "parentId": 5,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 0,
-        "paramId": "HP_SEP",
-        "operation": "",
-        "standardMh": "",
+        "paramId": "15371",
+        "operation": "*",
+        "standardMH": "1",
         "conditionType": "None",
-        "userComments": "Param 1: Table/Variable name"
+        "comment": "LOOKUP Array Parameter"
     }, {
         "id": 7,
         "parentId": 5,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 1,
-        "paramId": "SEPARATOR_COST",
-        "operation": "",
-        "standardMh": "",
+        "paramId": "15515",
+        "operation": "*",
+        "standardMH": "1",
         "conditionType": "None",
-        "userComments": "Param 2: Column name"
+        "comment": "LOOKUP Index Parameter"
     }, {
         "id": 8,
         "parentId": 5,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 2,
-        "paramId": "15001",
-        "operation": "",
-        "standardMh": "",
-        "conditionType": "None",
-        "userComments": "Param 3: Lookup key"
-    }, {
-        "id": 10,
-        "parentId": null,
-        "branchFlag": null,
-        "branchIndex": null,
-        "paramId": "18921",
+        "paramId": "15516",
         "operation": "*",
-        "standardMh": "1",
-        "conditionType": "LOOKUP",
-        "userComments": "LOOKUP with 5 params - LOOKUP([15080], PP_PPM_TUBE, [15006], {ml_code}, [15082])"
-    }, {
-        "id": 11,
-        "parentId": 10,
-        "branchFlag": true,
-        "branchIndex": 0,
-        "paramId": "15080",
-        "operation": "",
-        "standardMh": "",
+        "standardMH": "1",
         "conditionType": "None",
-        "userComments": "Param 1"
+        "comment": "LOOKUP Value Parameter"
     }, {
-        "id": 12,
-        "parentId": 10,
-        "branchFlag": true,
-        "branchIndex": 1,
-        "paramId": "PP_PPM_TUBE",
-        "operation": "",
-        "standardMh": "",
-        "conditionType": "None",
-        "userComments": "Param 2"
-    }, {
-        "id": 13,
-        "parentId": 10,
-        "branchFlag": true,
-        "branchIndex": 2,
-        "paramId": "15006",
-        "operation": "",
-        "standardMh": "",
-        "conditionType": "None",
-        "userComments": "Param 3"
-    }, {
-        "id": 14,
-        "parentId": 10,
-        "branchFlag": true,
+        "id": 9,
+        "parentId": 5,
+        "isTrueBranch": true,
         "branchIndex": 3,
-        "paramId": "{ml_code}",
-        "operation": "",
-        "standardMh": "",
+        "paramId": "17132",
+        "operation": "*",
+        "standardMH": "2.5",
         "conditionType": "None",
-        "userComments": "Param 4: Special format preserved"
-    }, {
-        "id": 15,
-        "parentId": 10,
-        "branchFlag": true,
-        "branchIndex": 4,
-        "paramId": "15082",
-        "operation": "",
-        "standardMh": "",
-        "conditionType": "None",
-        "userComments": "Param 5"
+        "comment": "Additional multiplier for LOOKUP result"
     }];
 
     const customParamIdOptions = [{
@@ -167,21 +115,29 @@ function FeaturesV3Example() {
         label: '[1000]',
         description: '1000 - Testing Description'
     }, {
-        value: '15001',
-        label: '[15001]',
-        description: '15001 - Lookup Key'
+        value: '15371',
+        label: '[15371]',
+        description: '15371 - Array Parameter'
     }, {
-        value: '15006',
-        label: '[15006]',
-        description: '15006 - Parameter'
+        value: '15515',
+        label: '[15515]',
+        description: '15515 - Index Parameter'
     }, {
-        value: '15080',
-        label: '[15080]',
-        description: '15080 - Parameter'
+        value: '15516',
+        label: '[15516]',
+        description: '15516 - Value Parameter'
     }, {
-        value: '15082',
-        label: '[15082]',
-        description: '15082 - Parameter'
+        value: '15517',
+        label: '[15517]',
+        description: '15517 - Testing Description'
+    }, {
+        value: '15518',
+        label: '[15518]',
+        description: '15518 - Testing Description'
+    }, {
+        value: '15984',
+        label: '[15984]',
+        description: '15984 - Testing Description'
     }, {
         value: '17132',
         label: '[17132]',
@@ -191,29 +147,13 @@ function FeaturesV3Example() {
         label: '[18910]',
         description: '18910 - Conditional Parameter'
     }, {
+        value: '18911',
+        label: '[18911]',
+        description: '18911 - Testing Description'
+    }, {
         value: '18920',
         label: '[18920]',
-        description: '18920 - LOOKUP Parameter (3 params)'
-    }, {
-        value: '18921',
-        label: '[18921]',
-        description: '18921 - LOOKUP Parameter (5 params)'
-    }, {
-        value: 'HP_SEP',
-        label: 'HP_SEP',
-        description: 'HP_SEP - Variable Name'
-    }, {
-        value: 'SEPARATOR_COST',
-        label: 'SEPARATOR_COST',
-        description: 'SEPARATOR_COST - Column Name'
-    }, {
-        value: 'PP_PPM_TUBE',
-        label: 'PP_PPM_TUBE',
-        description: 'PP_PPM_TUBE - Table Name'
-    }, {
-        value: '{ml_code}',
-        label: '{ml_code}',
-        description: '{ml_code} - Special Format Variable'
+        description: '18920 - LOOKUP Parameter'
     }];
 
     const customUomOptions = [{
@@ -229,20 +169,24 @@ function FeaturesV3Example() {
 
     // Helper function to transform flat data to nested structure
     const transformFlatToNestedData = (flatData) => {
-        console.log('🔄 Transforming flat data to nested structure for FeaturesV3...');
+        console.log('🔄 Transforming flat data to nested structure for FeaturesV2...');
         console.log('📊 Input flat data:', flatData);
 
+        // Create a map for quick lookup
         const dataMap = new Map();
         
+        // First pass: Create all rows with basic structure
         flatData.forEach(row => {
             dataMap.set(row.id, {
                 ...row,
-                description: row.description || '',
+                // Set default values for missing fields
+                paramDesc: row.paramDesc || '',
                 uom: row.uom || 'EA',
                 conditionType: row.conditionType || 'None',
-                userComments: row.userComments || '',
+                comment: row.comment || '',
                 isExpanded: row.isExpanded !== undefined ? row.isExpanded : (row.conditionType !== 'None'),
-                hasChildren: false,
+                hasChildren: false, // Will be updated in second pass
+                // Initialize children structure
                 children: {
                     trueChildren: [],
                     falseChildren: []
@@ -250,6 +194,7 @@ function FeaturesV3Example() {
             });
         });
 
+        // Second pass: Build parent-child relationships
         dataMap.forEach(row => {
             if (row.parentId !== null && row.parentId !== undefined) {
                 const parent = dataMap.get(row.parentId);
@@ -257,15 +202,17 @@ function FeaturesV3Example() {
                     parent.hasChildren = true;
                     parent.isExpanded = true;
                     
-                    if (row.branchFlag === true) {
+                    // Add to appropriate branch based on isTrueBranch
+                    if (row.isTrueBranch === true) {
                         parent.children.trueChildren.push(row);
-                    } else if (row.branchFlag === false) {
+                    } else if (row.isTrueBranch === false) {
                         parent.children.falseChildren.push(row);
                     }
                 }
             }
         });
 
+        // Sort children by branchIndex
         dataMap.forEach(row => {
             if (row.children.trueChildren.length > 0) {
                 row.children.trueChildren.sort((a, b) => (a.branchIndex || 0) - (b.branchIndex || 0));
@@ -275,9 +222,10 @@ function FeaturesV3Example() {
             }
         });
 
+        // Get root rows (no parent)
         const rootRows = Array.from(dataMap.values()).filter(row => row.parentId === null || row.parentId === undefined);
         
-        console.log('✅ FeaturesV3 transformation complete. Root rows:', rootRows.length);
+        console.log('✅ FeaturesV2 transformation complete. Root rows:', rootRows.length);
         console.log('🌳 Nested structure:', rootRows);
         
         return rootRows;
@@ -291,72 +239,99 @@ function FeaturesV3Example() {
     const [loading, setLoading] = useState(false);
     const [saveStatus, setSaveStatus] = useState('');
 
-    // Load sample data for FeaturesV3
-    const loadFeaturesV3Data = async () => {
+    // Load sample data for FeaturesV2
+    const loadFeaturesV2Data = async () => {
         setLoading(true);
-        setSaveStatus('🔄 Loading FeaturesV3 sample data...');
+        setSaveStatus('🔄 Loading FeaturesV2 sample data...');
         
         try {
+            // Simulate API delay
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            console.log('🚀 ===== LOADING FEATURESV3 DATA =====');
+            console.log('🚀 ===== LOADING FEATURESV2 DATA =====');
             console.log('🗄️ Custom Flat Data:', customInitialRows);
             console.log('🔢 Total rows from flat data:', customInitialRows.length);
             
+            // Transform flat data to nested structure
             const nestedRows = transformFlatToNestedData(customInitialRows);
             
             console.log('🌳 Transformed to nested structure:', nestedRows);
             
+            // DEBUG: Verify nested structure
             nestedRows.forEach((rootRow, index) => {
                 console.log(`🎯 Root Row ${index + 1} (${rootRow.id}):`);
                 console.log(`  - paramId: ${rootRow.paramId}`);
                 console.log(`  - conditionType: ${rootRow.conditionType}`);
                 console.log(`  - hasChildren: ${rootRow.hasChildren}`);
-                console.log(`  - userComments: ${rootRow.userComments}`);
+                console.log(`  - comment: ${rootRow.comment}`);
+                
+                if (rootRow.conditionType === 'LOOKUP') {
+                    console.log(`  - LOOKUP: array=${rootRow.lookupArray}, index=${rootRow.lookupIndex}, value=${rootRow.lookupValue}`);
+                }
+                
                 console.log(`  - trueChildren: ${rootRow.children.trueChildren.length}`);
                 console.log(`  - falseChildren: ${rootRow.children.falseChildren.length}`);
+                
+                // Show children details
+                if (rootRow.children.trueChildren.length > 0) {
+                    console.log(`    TRUE Children:`);
+                    rootRow.children.trueChildren.forEach((child, idx) => {
+                        console.log(`      ${idx + 1}. ID: ${child.id}, ParamID: ${child.paramId}, Comment: ${child.comment}`);
+                    });
+                }
+                if (rootRow.children.falseChildren.length > 0) {
+                    console.log(`    FALSE Children:`);
+                    rootRow.children.falseChildren.forEach((child, idx) => {
+                        console.log(`      ${idx + 1}. ID: ${child.id}, ParamID: ${child.paramId}, Comment: ${child.comment}`);
+                    });
+                }
             });
             
+            // Set the component data with custom data
             setComponentData({
                 initialRows: nestedRows,
                 paramIdOptions: customParamIdOptions,
                 uomOptions: customUomOptions
             });
             
-            console.log('✅ FeaturesV3 custom data loaded successfully!');
-            setSaveStatus(`✅ Loaded ${customInitialRows.length} rows transformed to ${nestedRows.length} root rows - Ready for FeaturesV3 testing!`);
+            console.log('✅ FeaturesV2 custom data loaded successfully!');
+            setSaveStatus(`✅ Loaded ${customInitialRows.length} rows transformed to ${nestedRows.length} root rows - Ready for FeaturesV2 testing!`);
             
         } catch (error) {
-            console.error('❌ Error loading FeaturesV3 data:', error);
-            setSaveStatus('❌ Error loading FeaturesV3 data');
+            console.error('❌ Error loading FeaturesV2 data:', error);
+            setSaveStatus('❌ Error loading FeaturesV2 data');
         } finally {
             setLoading(false);
         }
     };
 
-    // Save FeaturesV3 component data
-    const saveFeaturesV3Data = async (componentRows) => {
-        setSaveStatus('💾 Saving FeaturesV3 data...');
+    // Save FeaturesV2 component data
+    const saveFeaturesV2Data = async (componentRows) => {
+        setSaveStatus('💾 Saving FeaturesV2 data...');
         
         try {
-            console.log('📤 FeaturesV3 data for save:', componentRows);
+            console.log('📤 FeaturesV2 data for save:', componentRows);
+            
+            // Simulate API call
             await new Promise(resolve => setTimeout(resolve, 500));
-            setSaveStatus('✅ FeaturesV3 data saved successfully with IF/IF-ELSE/LOOKUP support');
+            setSaveStatus('✅ FeaturesV2 data saved successfully with LOOKUP support');
+            
         } catch (error) {
-            console.error('❌ Error saving FeaturesV3 data:', error);
-            setSaveStatus('❌ Error saving FeaturesV3 data');
+            console.error('❌ Error saving FeaturesV2 data:', error);
+            setSaveStatus('❌ Error saving FeaturesV2 data');
         }
     };
 
+    // Load data when component mounts
     useEffect(() => {
-        loadFeaturesV3Data();
+        loadFeaturesV2Data();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <div style={{ padding: '20px' }}>
-            <h2>🎯 FeaturesV3 - Enhanced IF Builder with LOOKUP</h2>
+            <h2>🎯 FeaturesV2 - Enhanced Formula Builder with LOOKUP</h2>
             
-            {/* Features Info */}
+            {/* Enhanced Features Info */}
             <div style={{ 
                 padding: '20px', 
                 marginBottom: '20px', 
@@ -364,10 +339,10 @@ function FeaturesV3Example() {
                 border: '2px solid #4caf50',
                 borderRadius: '8px'
             }}>
-                <h3>🎉 FeaturesV3 = FeaturesV1 + LOOKUP Enhancement</h3>
+                <h3>🎉 FeaturesV2 Enhancements</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '15px' }}>
                     <div>
-                        <h4>🔘 None Condition:</h4>
+                        <h4>🔘 None Condition (Default):</h4>
                         <ul style={{ marginBottom: 0 }}>
                             <li>Param ID, Description</li>
                             <li>UOM, Operation, Standard MH</li>
@@ -396,11 +371,11 @@ function FeaturesV3Example() {
                     <div>
                         <h4>🔍 LOOKUP Condition (NEW!):</h4>
                         <ul style={{ marginBottom: 0 }}>
-                            <li>Parent: Basic fields (like None)</li>
-                            <li>Dynamic Parameters (3, 5, 6, 7...)</li>
-                            <li>Child 1, 2, 3...: All are LOOKUP params</li>
-                            <li>Minimum 3 params required</li>
-                            <li>Add more with + button</li>
+                            <li>Parent row: Basic fields (like None)</li>
+                            <li>Child 1: Array Param for LOOKUP</li>
+                            <li>Child 2: Index Param for LOOKUP</li>
+                            <li>Child 3: Value Param for LOOKUP</li>
+                            <li>Child 4+: Optional multipliers</li>
                         </ul>
                     </div>
                 </div>
@@ -417,7 +392,7 @@ function FeaturesV3Example() {
                 <h4>📊 Status: {saveStatus}</h4>
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                     <button
-                        onClick={loadFeaturesV3Data}
+                        onClick={loadFeaturesV2Data}
                         disabled={loading}
                         style={{
                             padding: '10px 20px',
@@ -428,8 +403,39 @@ function FeaturesV3Example() {
                             cursor: loading ? 'not-allowed' : 'pointer'
                         }}
                     >
-                        🔄 Reload FeaturesV3 Data
+                        🔄 Reload FeaturesV2 Data
                     </button>
+                </div>
+            </div>
+
+            {/* Field Organization Info */}
+            <div style={{ 
+                padding: '15px', 
+                marginBottom: '20px', 
+                backgroundColor: '#fff3e0', 
+                border: '1px solid #ff9800',
+                borderRadius: '4px'
+            }}>
+                <h3>🔄 New Field Organization</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div>
+                        <h4>Field Order Changes:</h4>
+                        <ol style={{ fontSize: '14px' }}>
+                            <li><strong>Condition</strong> - Now appears FIRST</li>
+                            <li><strong>Param ID</strong> - Moved after Condition</li>
+                            <li>Dynamic fields based on Condition Type</li>
+                            <li><strong>Comment</strong> - Replaces old moduleDesc</li>
+                        </ol>
+                    </div>
+                    <div>
+                        <h4>Database Column Mapping:</h4>
+                        <ul style={{ fontSize: '14px' }}>
+                            <li><code>conditionType</code> - None/IF/IF-ELSE/LOOKUP</li>
+                            <li><code>comment</code> - User comment field</li>
+                            <li><code>lookupArray, lookupIndex, lookupValue</code> - LOOKUP params</li>
+                            <li>All existing fields maintained</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
@@ -441,32 +447,25 @@ function FeaturesV3Example() {
                 border: '1px solid #2196f3',
                 borderRadius: '4px'
             }}>
-                <h3>📋 FeaturesV3 Sample Data - Dynamic LOOKUP Parameters</h3>
+                <h3>📋 FeaturesV2 Sample Data</h3>
                 <p><strong>Test Scenarios:</strong></p>
                 <ul>
-                    <li><strong>Simple Calc (ID: 1):</strong> None ifCondition with basic calculation</li>
+                    <li><strong>Simple Calc (ID: 1):</strong> None condition with basic calculation</li>
                     <li><strong>IF-ELSE Logic (ID: 2):</strong> Conditional with TRUE/FALSE branches</li>
-                    <li><strong>LOOKUP 3 Params (ID: 5):</strong> LOOKUP(HP_SEP, SEPARATOR_COST, [15001])</li>
-                    <li><strong>LOOKUP 5 Params (ID: 10):</strong> LOOKUP([15080], PP_PPM_TUBE, [15006], {'{ml_code}'}, [15082])</li>
+                    <li><strong>LOOKUP Function (ID: 5):</strong> Parent row with basic fields, children define LOOKUP params</li>
+                    <li><strong>LOOKUP Children (ID: 6-8):</strong> First 3 children are Array, Index, Value parameters</li>
+                    <li><strong>LOOKUP Multiplier (ID: 9):</strong> 4th+ children multiply the LOOKUP result</li>
                 </ul>
-                <p><strong>Key Features:</strong></p>
-                <ul>
-                    <li>✅ Supports 3, 5, 6, 7+ parameters</li>
-                    <li>✅ Smart formatting: [brackets] for IDs, quotes for text, raw for variables</li>
-                    <li>✅ Preserves special formats like {'{ml_code}'}</li>
-                    <li>✅ Minimum 3 parameters enforced</li>
-                    <li>✅ Use + button to add more parameters</li>
-                </ul>
-                <p><strong>Test Instructions:</strong> Try all ifCondition types: None, IF, IF-ELSE, and LOOKUP with different param counts!</p>
+                <p><strong>Test Instructions:</strong> LOOKUP parent stays clean like None condition. First 3 children configure LOOKUP parameters. Additional children multiply the result!</p>
             </div>
 
-            {/* The FeaturesV3 Component */}
+            {/* The FeaturesV2 Component */}
             <div style={{ border: '2px solid #4caf50', borderRadius: '8px', padding: '10px' }}>
-                <FeaturesV3
+                <FeaturesV2
                     initialRows={componentData.initialRows}
                     paramIdOptions={componentData.paramIdOptions}
                     uomOptions={componentData.uomOptions}
-                    onDataChange={saveFeaturesV3Data}
+                    onDataChange={saveFeaturesV2Data}
                 />
             </div>
 
@@ -478,32 +477,30 @@ function FeaturesV3Example() {
                 border: '1px solid #0066cc',
                 borderRadius: '4px'
             }}>
-                <h3>📖 How to Use FeaturesV3</h3>
+                <h3>📖 How to Use FeaturesV2</h3>
                 <ol>
-                    <li><strong>Choose Condition Type:</strong> None (default) | IF | IF-ELSE | LOOKUP</li>
+                    <li><strong>Choose Condition Type FIRST:</strong> None (default) | IF | IF-ELSE | LOOKUP</li>
                     <li><strong>None:</strong> Fill Param ID, UOM, Operation, Standard MH/UOM, Comment</li>
                     <li><strong>IF:</strong> Set conditional fields, then add children to TRUE branch</li>
                     <li><strong>IF-ELSE:</strong> Set conditional fields, then add children to both branches</li>
-                    <li><strong>LOOKUP:</strong> Parent row has basic fields. All children are LOOKUP parameters (min 3, max unlimited)</li>
-                    <li><strong>Add Children:</strong> Use + button to add more rows (for IF/IF-ELSE/LOOKUP)</li>
+                    <li><strong>LOOKUP:</strong> Parent row has basic fields. First 3 children are Array/Index/Value params</li>
+                    <li><strong>Add Children:</strong> Use + button to add more multipliers after 3 LOOKUP params</li>
                     <li><strong>Save & Validate:</strong> Click "Save Data" to see database format</li>
                 </ol>
                 
-                <h4>🆕 What's in FeaturesV3:</h4>
+                <h4>🆕 What's New in V2:</h4>
                 <ul>
-                    <li>✅ All FeaturesV1 capabilities (None/IF/IF-ELSE with searchable dropdowns)</li>
-                    <li>✅ LOOKUP ifCondition with clean parent row (basic fields like None)</li>
-                    <li>✅ Dynamic LOOKUP parameters - supports 3, 4, 5, 6, 7, or more parameters</li>
-                    <li>✅ Smart parameter formatting: [15001] for IDs, 'TEXT' for strings, VARIABLE for uppercase, {'{ml_code}'} preserved</li>
-                    <li>✅ Minimum 3 parameters enforced for valid LOOKUP syntax</li>
-                    <li>✅ Sequential ID system for clean database storage</li>
-                    <li>✅ Deep copy state management preventing reference issues</li>
-                    <li>✅ Comprehensive validation for all ifCondition types</li>
-                    <li>✅ Database transformation utilities included</li>
+                    <li>✨ Condition field moved to front for better UX</li>
+                    <li>🔍 LOOKUP function: Parent row keeps basic fields clean</li>
+                    <li>🌳 LOOKUP uses 3 children for Array/Index/Value params</li>
+                    <li>📊 LOOKUP 4th+ children multiply the result</li>
+                    <li>💬 Comment field replaces moduleDesc</li>
+                    <li>🗄️ Enhanced database column mapping</li>
+                    <li>🎯 Default "None" condition for new rows</li>
                 </ul>
             </div>
         </div>
     );
 }
 
-export default FeaturesV3Example;
+export default FeaturesV2Example;

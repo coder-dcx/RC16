@@ -62,21 +62,21 @@ function FeaturesV2({
         return {
             id: newId,
             parentId: null,
-            isTrueBranch: null,
+            branchFlag: null,
             branchIndex: null,
             paramId: '',
-            paramDesc: '',
+            description: '',
             uom: 'EA',
             operation: '*',
-            standardMH: '',
-            conditionType: 'None', // DEFAULT: None condition type
+            standardMh: '',
+            conditionType: 'None', // DEFAULT: None ifCondition type
             comment: '', // NEW: Comment field
             isExpanded: false,
             hasChildren: false,
             // Conditional fields for IF/IF-ELSE
             leftType: 'PARAM ID',
             leftValue: '',
-            condition: '=',
+            ifCondition: '=',
             rightType: 'PARAM ID',
             rightValue: '',
             // LOOKUP fields
@@ -96,7 +96,7 @@ function FeaturesV2({
             return initialRows.map(row => ({
                 ...row,
                 conditionType: row.conditionType || 'None',
-                standardMH: String(row.standardMH || ''),
+                standardMh: String(row.standardMh || ''),
                 comment: row.comment || '',
                 isExpanded: row.isExpanded !== undefined ? row.isExpanded : (row.conditionType !== 'None'),
                 hasChildren: row.hasChildren !== undefined ? row.hasChildren : (row.conditionType !== 'None'),
@@ -194,11 +194,11 @@ function FeaturesV2({
             if (!row.operation || row.operation.trim() === '') {
                 errors[`${rowPath}.operation`] = 'Operation is required';
             }
-            if (row.standardMH === null || row.standardMH === undefined || row.standardMH === '') {
-                errors[`${rowPath}.standardMH`] = 'Standard MH/UOM is required';
+            if (row.standardMh === null || row.standardMh === undefined || row.standardMh === '') {
+                errors[`${rowPath}.standardMh`] = 'Standard MH/UOM is required';
             }
         } else if (row.conditionType === 'LOOKUP') {
-            // Validate LOOKUP parent row has basic fields like None condition
+            // Validate LOOKUP parent row has basic fields like None ifCondition
             if (!row.paramId || row.paramId.trim() === '') {
                 errors[`${rowPath}.paramId`] = 'Param ID is required';
             }
@@ -208,8 +208,8 @@ function FeaturesV2({
             if (!row.operation || row.operation.trim() === '') {
                 errors[`${rowPath}.operation`] = 'Operation is required';
             }
-            if (row.standardMH === null || row.standardMH === undefined || row.standardMH === '') {
-                errors[`${rowPath}.standardMH`] = 'Standard MH/UOM is required';
+            if (row.standardMh === null || row.standardMh === undefined || row.standardMh === '') {
+                errors[`${rowPath}.standardMh`] = 'Standard MH/UOM is required';
             }
             // Validate LOOKUP needs at least 3 children
             if (!row.children?.trueChildren || row.children.trueChildren.length < 3) {
@@ -222,8 +222,8 @@ function FeaturesV2({
             if (!row.leftValue || row.leftValue.trim() === '') {
                 errors[`${rowPath}.leftValue`] = 'Left Value is required';
             }
-            if (!row.condition || row.condition.trim() === '') {
-                errors[`${rowPath}.condition`] = 'Condition is required';
+            if (!row.ifCondition || row.ifCondition.trim() === '') {
+                errors[`${rowPath}.ifCondition`] = 'Condition is required';
             }
             if (!row.rightType || row.rightType.trim() === '') {
                 errors[`${rowPath}.rightType`] = 'Right Type is required';
@@ -270,7 +270,7 @@ function FeaturesV2({
 
     // Helper functions
     const buildValidationPath = (row, allRows) => {
-        if (!row.parentId || row.isTrueBranch === null) {
+        if (!row.parentId || row.branchFlag === null) {
             return row.id;
         }
         
@@ -280,7 +280,7 @@ function FeaturesV2({
         }
         
         const parentPath = buildValidationPath(parent, allRows);
-        const branchType = row.isTrueBranch ? 'true' : 'false';
+        const branchType = row.branchFlag ? 'true' : 'false';
         const branchIndex = row.branchIndex !== null ? row.branchIndex : 0;
         return `${parentPath}.${branchType}.${branchIndex}`;
     };
@@ -314,24 +314,24 @@ function FeaturesV2({
     };
 
     // Create new row structure
-    const createNewRow = (id, parentId = null, isTrueBranch = null, branchIndex = null) => ({
+    const createNewRow = (id, parentId = null, branchFlag = null, branchIndex = null) => ({
         id,
         parentId,
-        isTrueBranch,
+        branchFlag,
         branchIndex,
         paramId: '',
-        paramDesc: '',
+        description: '',
         uom: 'EA',
         operation: '*',
-        standardMH: '',
-        conditionType: 'None', // DEFAULT: None condition type
+        standardMh: '',
+        conditionType: 'None', // DEFAULT: None ifCondition type
         comment: '', // NEW: Comment field
         isExpanded: false,
         hasChildren: false,
         // Conditional fields
         leftType: 'PARAM ID',
         leftValue: '',
-        condition: '=',
+        ifCondition: '=',
         rightType: 'PARAM ID',
         rightValue: '',
         // LOOKUP fields
@@ -362,7 +362,7 @@ function FeaturesV2({
                 if (field === 'paramId') {
                     const selectedParam = finalParamOptions.find(opt => opt.value === value);
                     if (selectedParam) {
-                        row.paramDesc = selectedParam.description || '';
+                        row.description = selectedParam.description || '';
                     }
                 }
                 return true;
@@ -397,7 +397,7 @@ function FeaturesV2({
                 row.hasChildren = hasChildren;
                 
                 if (hasChildren && row.children.trueChildren.length === 0 && row.children.falseChildren.length === 0) {
-                    console.log(`🔧 Creating children for parent ${rowId}, condition type: ${conditionType}`);
+                    console.log(`🔧 Creating children for parent ${rowId}, ifCondition type: ${conditionType}`);
                     
                     if (conditionType === 'IF-ELSE') {
                         const [trueChildId, falseChildId] = generateMultipleIds(2);
@@ -415,7 +415,7 @@ function FeaturesV2({
                         row.children.trueChildren = [trueChild];
                         row.children.falseChildren = [];
                         
-                        console.log(`✅ Created child ID: ${trueChildId} for IF condition`);
+                        console.log(`✅ Created child ID: ${trueChildId} for IF ifCondition`);
                     } else if (conditionType === 'LOOKUP') {
                         // Create 3 children for LOOKUP (array, index, value)
                         const [arrayId, indexId, valueId] = generateMultipleIds(3);
@@ -432,7 +432,7 @@ function FeaturesV2({
                     
                     row.isExpanded = true;
                 } else if (hasChildren) {
-                    console.log(`🔄 Switching condition type to: ${conditionType} for parent ${rowId}`);
+                    console.log(`🔄 Switching ifCondition type to: ${conditionType} for parent ${rowId}`);
                     
                     if (conditionType === 'IF') {
                         row.children.falseChildren = [];
@@ -520,23 +520,23 @@ function FeaturesV2({
     };
 
     // Add child row
-    const addChildRow = (parentRowId, isTrueBranch) => {
+    const addChildRow = (parentRowId, branchFlag) => {
         setRows(prevRows => {
             const newRows = JSON.parse(JSON.stringify(prevRows));
-            addChildRowRecursive(newRows, parentRowId, isTrueBranch);
+            addChildRowRecursive(newRows, parentRowId, branchFlag);
             if (onDataChange) onDataChange(newRows);
             return newRows;
         });
     };
 
-    const addChildRowRecursive = (rowsList, parentRowId, isTrueBranch) => {
+    const addChildRowRecursive = (rowsList, parentRowId, branchFlag) => {
         for (let row of rowsList) {
             if (row.id === parentRowId) {
-                const targetArray = isTrueBranch ? row.children.trueChildren : row.children.falseChildren;
+                const targetArray = branchFlag ? row.children.trueChildren : row.children.falseChildren;
                 const newIndex = targetArray.length;
                 const newRowId = generateNextId();
                 
-                const newChildRow = createNewRow(newRowId, parentRowId, isTrueBranch, newIndex);
+                const newChildRow = createNewRow(newRowId, parentRowId, branchFlag, newIndex);
                 targetArray.push(newChildRow);
                 
                 row.hasChildren = true;
@@ -544,10 +544,10 @@ function FeaturesV2({
                 return true;
             }
             
-            if (row.children.trueChildren && addChildRowRecursive(row.children.trueChildren, parentRowId, isTrueBranch)) {
+            if (row.children.trueChildren && addChildRowRecursive(row.children.trueChildren, parentRowId, branchFlag)) {
                 return true;
             }
-            if (row.children.falseChildren && addChildRowRecursive(row.children.falseChildren, parentRowId, isTrueBranch)) {
+            if (row.children.falseChildren && addChildRowRecursive(row.children.falseChildren, parentRowId, branchFlag)) {
                 return true;
             }
         }
@@ -555,19 +555,19 @@ function FeaturesV2({
     };
 
     // Remove child row
-    const removeChildRow = (parentRowId, isTrueBranch, childIndex) => {
+    const removeChildRow = (parentRowId, branchFlag, childIndex) => {
         setRows(prevRows => {
             const newRows = JSON.parse(JSON.stringify(prevRows));
-            removeChildRowRecursive(newRows, parentRowId, isTrueBranch, childIndex);
+            removeChildRowRecursive(newRows, parentRowId, branchFlag, childIndex);
             if (onDataChange) onDataChange(newRows);
             return newRows;
         });
     };
 
-    const removeChildRowRecursive = (rowsList, parentRowId, isTrueBranch, childIndex) => {
+    const removeChildRowRecursive = (rowsList, parentRowId, branchFlag, childIndex) => {
         for (let row of rowsList) {
             if (row.id === parentRowId) {
-                const targetArray = isTrueBranch ? row.children.trueChildren : row.children.falseChildren;
+                const targetArray = branchFlag ? row.children.trueChildren : row.children.falseChildren;
                 
                 if (childIndex >= 0 && childIndex < targetArray.length) {
                     targetArray.splice(childIndex, 1);
@@ -581,10 +581,10 @@ function FeaturesV2({
                 return true;
             }
             
-            if (row.children.trueChildren && removeChildRowRecursive(row.children.trueChildren, parentRowId, isTrueBranch, childIndex)) {
+            if (row.children.trueChildren && removeChildRowRecursive(row.children.trueChildren, parentRowId, branchFlag, childIndex)) {
                 return true;
             }
-            if (row.children.falseChildren && removeChildRowRecursive(row.children.falseChildren, parentRowId, isTrueBranch, childIndex)) {
+            if (row.children.falseChildren && removeChildRowRecursive(row.children.falseChildren, parentRowId, branchFlag, childIndex)) {
                 return true;
             }
         }
@@ -595,19 +595,19 @@ function FeaturesV2({
     const generateFormula = (row) => {
         if (row.conditionType === 'None') {
             const paramDisplay = row.paramId ? `[${row.paramId}]` : '[PARAM]';
-            const standardMH = String(row.standardMH || '');
+            const standardMh = String(row.standardMh || '');
             const operation = row.operation || '*';
             
             if (operation === 'Number' || operation === 'String') {
-                if (!standardMH || standardMH.trim() === '') {
+                if (!standardMh || standardMh.trim() === '') {
                     return operation === 'Number' ? '0' : 'EMPTY_STRING';
                 }
-                return standardMH;
+                return standardMh;
             } else {
-                if (!standardMH || standardMH.trim() === '' || standardMH === '0') {
+                if (!standardMh || standardMh.trim() === '' || standardMh === '0') {
                     return paramDisplay;
                 }
-                return `${paramDisplay} ${operation} ${standardMH}`;
+                return `${paramDisplay} ${operation} ${standardMh}`;
             }
         } else if (row.conditionType === 'LOOKUP') {
             // LOOKUP formula: Extract [array], [index], [value] from first 3 children
@@ -653,7 +653,7 @@ function FeaturesV2({
             };
 
             const leftVal = formatValueForFormula(row.leftValue, row.leftType);
-            const condition = row.condition || '=';
+            const ifCondition = row.ifCondition || '=';
             const rightVal = formatValueForFormula(row.rightValue, row.rightType);
             
             const generateChildrenFormula = (children) => {
@@ -666,10 +666,10 @@ function FeaturesV2({
             const trueFormula = generateChildrenFormula(row.children.trueChildren);
             
             if (row.conditionType === 'IF') {
-                return `IF(${leftVal} ${condition} ${rightVal}, ${trueFormula})`;
+                return `IF(${leftVal} ${ifCondition} ${rightVal}, ${trueFormula})`;
             } else if (row.conditionType === 'IF-ELSE') {
                 const falseFormula = generateChildrenFormula(row.children.falseChildren);
-                return `IF(${leftVal} ${condition} ${rightVal}, ${trueFormula}, ${falseFormula})`;
+                return `IF(${leftVal} ${ifCondition} ${rightVal}, ${trueFormula}, ${falseFormula})`;
             }
         }
     };
@@ -830,20 +830,20 @@ function FeaturesV2({
         // Database format with correct column names
         const dbFormatRows = [];
         
-        const flattenRow = (row, parentId = null, isTrueBranch = null, branchIndex = null) => {
+        const flattenRow = (row, parentId = null, branchFlag = null, branchIndex = null) => {
             // Main row
             dbFormatRows.push({
                 id: row.id,
                 conditionType: row.conditionType,
                 parentId: parentId,
-                isTrueBranch: isTrueBranch,
+                branchFlag: branchFlag,
                 branchIndex: branchIndex,
                 paramId: row.paramId,
                 operation: row.operation || '',
-                standardMH: row.standardMH || '',
+                standardMh: row.standardMh || '',
                 leftType: row.leftType || '',
                 leftValue: row.leftValue || '',
-                condition: row.condition || '',
+                ifCondition: row.ifCondition || '',
                 rightType: row.rightType || '',
                 rightValue: row.rightValue || '',
                 uom: row.uom || '',
@@ -882,8 +882,8 @@ function FeaturesV2({
     };
 
     // Render children section
-    const renderChildrenSection = (row, isTrueBranch) => {
-        const children = isTrueBranch ? row.children.trueChildren : row.children.falseChildren;
+    const renderChildrenSection = (row, branchFlag) => {
+        const children = branchFlag ? row.children.trueChildren : row.children.falseChildren;
         
         // For LOOKUP, show different label and color
         let branchName, branchColor, backgroundColor;
@@ -892,9 +892,9 @@ function FeaturesV2({
             branchColor = '#ff9800'; // Orange for LOOKUP
             backgroundColor = '#fff3e0';
         } else {
-            branchName = isTrueBranch ? 'TRUE' : 'FALSE';
-            branchColor = isTrueBranch ? '#4caf50' : '#f44336';
-            backgroundColor = isTrueBranch ? '#e8f5e8' : '#ffebee';
+            branchName = branchFlag ? 'TRUE' : 'FALSE';
+            branchColor = branchFlag ? '#4caf50' : '#f44336';
+            backgroundColor = branchFlag ? '#e8f5e8' : '#ffebee';
         }
         
         return (
@@ -914,7 +914,7 @@ function FeaturesV2({
                     <Tooltip title={`Add new row to ${branchName}`}>
                         <IconButton
                             size="small"
-                            onClick={() => addChildRow(row.id, isTrueBranch)}
+                            onClick={() => addChildRow(row.id, branchFlag)}
                             style={{ color: branchColor }}
                         >
                             <AddIcon />
@@ -950,7 +950,7 @@ function FeaturesV2({
                                     <Tooltip title={`Remove this row from ${branchName} branch`}>
                                         <IconButton
                                             size="small"
-                                            onClick={() => removeChildRow(row.id, isTrueBranch, index)}
+                                            onClick={() => removeChildRow(row.id, branchFlag, index)}
                                             style={{ color: '#f44336', marginRight: '10px' }}
                                         >
                                             <RemoveIcon />
@@ -1001,8 +1001,8 @@ function FeaturesV2({
 
                 {/* TRUE/FALSE Indicator for child rows */}
                 {isChild && (
-                    <div className={`col-block col-condition ${row.isTrueBranch ? 'true' : 'false'} w40`}>
-                        {row.isTrueBranch ? <DoneIcon /> : <ClearIcon />}
+                    <div className={`col-block col-ifCondition ${row.branchFlag ? 'true' : 'false'} w40`}>
+                        {row.branchFlag ? <DoneIcon /> : <ClearIcon />}
                         {childIndex !== null && (
                             <Typography variant="caption" style={{ marginLeft: '4px' }}>
                                 {childIndex + 1}
@@ -1078,7 +1078,7 @@ function FeaturesV2({
                         <div className='col-block w200'>
                             <TextField
                                 label="Param Description"
-                                value={row.paramDesc}
+                                value={row.description}
                                 variant="outlined"
                                 size="small"
                                 disabled
@@ -1148,13 +1148,13 @@ function FeaturesV2({
                             <TextField
                                 label="Standard MH/UOM"
                                 type="text"
-                                value={String(row.standardMH || '')}
+                                value={String(row.standardMh || '')}
                                 onChange={(e) => {
-                                    updateRow(row.id, 'standardMH', e.target.value);
+                                    updateRow(row.id, 'standardMh', e.target.value);
                                 }}
                                 variant="outlined"
                                 size="small"
-                                error={hasFieldError(row, 'standardMH')}
+                                error={hasFieldError(row, 'standardMh')}
                             />
                         </div>
 
@@ -1199,14 +1199,14 @@ function FeaturesV2({
                             <FormControl 
                                 variant="outlined" 
                                 size="small"
-                                error={hasFieldError(row, 'condition')}
+                                error={hasFieldError(row, 'ifCondition')}
                             >
-                                <InputLabel error={hasFieldError(row, 'condition')}>Condition</InputLabel>
+                                <InputLabel error={hasFieldError(row, 'ifCondition')}>Condition</InputLabel>
                                 <Select
-                                    value={row.condition}
-                                    onChange={(e) => updateRow(row.id, 'condition', e.target.value)}
+                                    value={row.ifCondition}
+                                    onChange={(e) => updateRow(row.id, 'ifCondition', e.target.value)}
                                     label="Condition"
-                                    error={hasFieldError(row, 'condition')}
+                                    error={hasFieldError(row, 'ifCondition')}
                                 >
                                     {conditionOptions.map(cond => (
                                         <MenuItem key={cond} value={cond}>{cond}</MenuItem>
@@ -1286,7 +1286,7 @@ function FeaturesV2({
                         <div className='col-block w200'>
                             <TextField
                                 label="Param Description"
-                                value={row.paramDesc}
+                                value={row.description}
                                 variant="outlined"
                                 size="small"
                                 disabled
@@ -1345,23 +1345,23 @@ function FeaturesV2({
                         <div className='col-block'>
                             <TextField
                                 label="Standard MH/UOM"
-                                value={row.standardMH}
-                                onChange={(e) => updateRow(row.id, 'standardMH', e.target.value)}
+                                value={row.standardMh}
+                                onChange={(e) => updateRow(row.id, 'standardMh', e.target.value)}
                                 variant="outlined"
                                 size="small"
                                 type="number"
-                                error={hasFieldError(row, 'standardMH')}
+                                error={hasFieldError(row, 'standardMh')}
                             />
                         </div>
                     </>
                 )}
 
-                {/* Formula Preview - Show for all condition types */}
+                {/* Formula Preview - Show for all ifCondition types */}
                 <div className='col-block formula-preview'>
                     <span>{generateFormula(row)}</span>
                 </div>
 
-                {/* Comment - Show for all condition types */}
+                {/* Comment - Show for all ifCondition types */}
                 <div className='col-block w200'>
                     <TextField
                         label="Comment"
@@ -1445,7 +1445,7 @@ function FeaturesV2({
                         borderRadius: '4px',
                         border: '1px solid #2196f3'
                     }}>
-                        ✨ <strong>FeaturesV2 Enhancements:</strong> Choose condition type (None/IF/IF-ELSE/LOOKUP)! 
+                        ✨ <strong>FeaturesV2 Enhancements:</strong> Choose ifCondition type (None/IF/IF-ELSE/LOOKUP)! 
                         LOOKUP works like Excel: LOOKUP([array], [index], [value]). 
                         New row default is "None". Condition field moved before Param ID.
                     </Typography>

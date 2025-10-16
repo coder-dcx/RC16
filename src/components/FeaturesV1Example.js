@@ -19,114 +19,114 @@ function FeaturesV1Example() {
     const customInitialRows = [{
         "id": 1,
         "parentId": null,
-        "isTrueBranch": null,
+        "branchFlag": null,
         "branchIndex": null,
         "paramId": "17132",
         "operation": "*",
-        "standardMH": "84"
+        "standardMh": "84"
     }, {
         "id": 2,
         "parentId": null,
-        "isTrueBranch": null,
+        "branchFlag": null,
         "branchIndex": null,
         "paramId": "1000",
         "operation": "",
-        "standardMH": "",
+        "standardMh": "",
         "leftType": "PARAM ID",
         "leftValue": "1000",
-        "condition": "=",
+        "ifCondition": "=",
         "rightType": "TEXT",
         "rightValue": "OT1.1"
     }, {
         "id": 3,
         "parentId": 2,
-        "isTrueBranch": true,
+        "branchFlag": true,
         "branchIndex": 0,
         "paramId": "18910",
         "operation": "*",
-        "standardMH": "1.39"
+        "standardMh": "1.39"
     }, {
         "id": 5,
         "parentId": 2,
-        "isTrueBranch": true,
+        "branchFlag": true,
         "branchIndex": 1,
         "paramId": "18911",
         "operation": "*",
-        "standardMH": "1.54"
+        "standardMh": "1.54"
     }, {
         "id": 4,
         "parentId": 2,
-        "isTrueBranch": false,
+        "branchFlag": false,
         "branchIndex": 0,
         "paramId": "18910",
         "operation": "*",
-        "standardMH": "1.05"
+        "standardMh": "1.05"
     }, {
         "id": 6,
         "parentId": 2,
-        "isTrueBranch": false,
+        "branchFlag": false,
         "branchIndex": 1,
         "paramId": "18910",
         "operation": "",
-        "standardMH": "",
+        "standardMh": "",
         "leftType": "PARAM ID",
         "leftValue": "18910",
-        "condition": ">",
+        "ifCondition": ">",
         "rightType": "NUMBER",
         "rightValue": "0"
     }, {
         "id": 7,
         "parentId": 6,
-        "isTrueBranch": true,
+        "branchFlag": true,
         "branchIndex": 0,
         "paramId": "18910",
         "operation": "Number",
-        "standardMH": "316"
+        "standardMh": "316"
     }, {
         "id": 8,
         "parentId": 6,
-        "isTrueBranch": false,
+        "branchFlag": false,
         "branchIndex": 0,
         "paramId": "18910",
         "operation": "Number",
-        "standardMH": "0"
+        "standardMh": "0"
     }, {
         "id": 9,
         "parentId": 2,
-        "isTrueBranch": false,
+        "branchFlag": false,
         "branchIndex": 2,
         "paramId": "18920",
         "operation": "*",
-        "standardMH": "150"
+        "standardMh": "150"
     }, {
         "id": 10,
         "parentId": 2,
-        "isTrueBranch": false,
+        "branchFlag": false,
         "branchIndex": 3,
         "paramId": "18910",
         "operation": "",
-        "standardMH": "",
+        "standardMh": "",
         "leftType": "PARAM ID",
         "leftValue": "18910",
-        "condition": ">",
+        "ifCondition": ">",
         "rightType": "NUMBER",
         "rightValue": "0"
     }, {
         "id": 11,
         "parentId": 10,
-        "isTrueBranch": true,
+        "branchFlag": true,
         "branchIndex": 0,
         "paramId": "18910",
         "operation": "Number",
-        "standardMH": "200"
+        "standardMh": "200"
     }, {
         "id": 12,
         "parentId": 10,
-        "isTrueBranch": false,
+        "branchFlag": false,
         "branchIndex": 0,
         "paramId": "18910",
         "operation": "Number",
-        "standardMH": "0"
+        "standardMh": "0"
     }];
 
     const customParamIdOptions = [{
@@ -209,8 +209,8 @@ function FeaturesV1Example() {
             dataMap.set(row.id, {
                 ...row,
                 // Set default values for missing fields
-                paramDesc: row.paramDesc || '',
-                moduleDesc: row.moduleDesc || '',
+                description: row.description || '',
+                userComments: row.userComments || '',
                 uom: row.uom || 'EA',
                 conditionType: row.conditionType || (row.leftValue ? 'IF-ELSE' : 'None'),
                 ifChecked: row.ifChecked !== undefined ? row.ifChecked : !!row.leftValue,
@@ -232,10 +232,10 @@ function FeaturesV1Example() {
                     parent.hasChildren = true;
                     parent.isExpanded = true;
                     
-                    // Add to appropriate branch based on isTrueBranch
-                    if (row.isTrueBranch === true) {
+                    // Add to appropriate branch based on branchFlag
+                    if (row.branchFlag === true) {
                         parent.children.trueChildren.push(row);
-                    } else if (row.isTrueBranch === false) {
+                    } else if (row.branchFlag === false) {
                         parent.children.falseChildren.push(row);
                     }
                 }
@@ -300,13 +300,13 @@ function FeaturesV1Example() {
                 if (rootRow.children.trueChildren.length > 0) {
                     console.log(`    TRUE Children:`);
                     rootRow.children.trueChildren.forEach((child, idx) => {
-                        console.log(`      ${idx + 1}. ID: ${child.id}, ParamID: ${child.paramId}, Op: ${child.operation}, StandardMH: ${child.standardMH}`);
+                        console.log(`      ${idx + 1}. ID: ${child.id}, ParamID: ${child.paramId}, Op: ${child.operation}, StandardMH: ${child.standardMh}`);
                     });
                 }
                 if (rootRow.children.falseChildren.length > 0) {
                     console.log(`    FALSE Children:`);
                     rootRow.children.falseChildren.forEach((child, idx) => {
-                        console.log(`      ${idx + 1}. ID: ${child.id}, ParamID: ${child.paramId}, Op: ${child.operation}, StandardMH: ${child.standardMH}`);
+                        console.log(`      ${idx + 1}. ID: ${child.id}, ParamID: ${child.paramId}, Op: ${child.operation}, StandardMH: ${child.standardMh}`);
                     });
                 }
             });
@@ -350,7 +350,7 @@ function FeaturesV1Example() {
             
             // Simulate API call
             await new Promise(resolve => setTimeout(resolve, 500));
-            setSaveStatus('✅ FeaturesV1 data saved successfully with condition type analysis');
+            setSaveStatus('✅ FeaturesV1 data saved successfully with ifCondition type analysis');
             
         } catch (error) {
             console.error('❌ Error saving FeaturesV1 data:', error);
@@ -447,12 +447,12 @@ function FeaturesV1Example() {
 {`{
   "id": 2,
   "parentId": 1,
-  "isTrueBranch": true,
+  "branchFlag": true,
   "branchIndex": 0,
   "paramId": "000002",
   "conditionType": "IF-ELSE", // NEW FIELD
   "ifChecked": true,          // Legacy support
-  "moduleDesc": "..."
+  "userComments": "..."
 }`}
                         </pre>
                     </div>
@@ -485,12 +485,12 @@ function FeaturesV1Example() {
                 <h3>📋 Sample Data Preview</h3>
                 <p><strong>Test Scenarios:</strong></p>
                 <ul>
-                    <li><strong>Engine Speed:</strong> IF-ELSE condition with multiple TRUE/FALSE children</li>
+                    <li><strong>Engine Speed:</strong> IF-ELSE ifCondition with multiple TRUE/FALSE children</li>
                     <li><strong>Temperature:</strong> Nested IF-ELSE with deep branching</li>
                     <li><strong>Pressure:</strong> Complex IF-ELSE with 4 TRUE + 3 FALSE children</li>
-                    <li><strong>Simple Calc:</strong> None condition (no branches)</li>
+                    <li><strong>Simple Calc:</strong> None ifCondition (no branches)</li>
                 </ul>
-                <p><strong>Test Instructions:</strong> Change condition types in dropdown and see how branches appear/disappear!</p>
+                <p><strong>Test Instructions:</strong> Change ifCondition types in dropdown and see how branches appear/disappear!</p>
             </div>
 
             {/* The FeaturesV1 Component */}
@@ -518,7 +518,7 @@ function FeaturesV1Example() {
                     <li><strong>IF:</strong> Shows only TRUE branch with multiple children support</li>
                     <li><strong>IF-ELSE:</strong> Shows both TRUE and FALSE branches</li>
                     <li><strong>Add Children:</strong> Click + button in branch sections to add multiple rows</li>
-                    <li><strong>Nested Conditions:</strong> Set condition types on child rows for deep nesting</li>
+                    <li><strong>Nested Conditions:</strong> Set ifCondition types on child rows for deep nesting</li>
                     <li><strong>Save & Validate:</strong> Click "Save Data" to see database format with conditionType analysis</li>
                 </ol>
             </div>

@@ -25,10 +25,7 @@ import RemoveIcon from '@material-ui/icons/Remove';
 
 import './index.css';
 
-// Import transformation utilities for database format
-import { prepareEnhancedDataForDatabase } from './EnhancedDataTransformUtils';
-
-function FeaturesV3({ 
+function FeaturesV2({ 
     initialRows = [], 
     paramIdOptions = [], 
     uomOptions = [], 
@@ -57,7 +54,7 @@ function FeaturesV3({
         return ids;
     };
 
-    // Create default initial rows if needed - Fixed to not cause infinite loops
+    // Create default initial rows with default conditionType as "None"
     const createDefaultRow = () => {
         const newId = idCounter;
         setIdCounter(prev => prev + 1);
@@ -65,23 +62,27 @@ function FeaturesV3({
         return {
             id: newId,
             parentId: null,
-            branchFlag: null,
+            isTrueBranch: null,
             branchIndex: null,
             paramId: '',
-            description: '',
-            userComments: '',
+            paramDesc: '',
             uom: 'EA',
             operation: '*',
-            standardMh: '',
-            conditionType: 'None', // Enhanced: None | IF | IF-ELSE | LOOKUP
-            ifChecked: false,
+            standardMH: '',
+            conditionType: 'None', // DEFAULT: None condition type
+            comment: '', // NEW: Comment field
             isExpanded: false,
             hasChildren: false,
+            // Conditional fields for IF/IF-ELSE
             leftType: 'PARAM ID',
             leftValue: '',
-            ifCondition: '==',
+            condition: '=',
             rightType: 'PARAM ID',
             rightValue: '',
+            // LOOKUP fields
+            lookupArray: '', // For LOOKUP([param1], [param2], [param3])
+            lookupIndex: '',
+            lookupValue: '',
             children: {
                 trueChildren: [],
                 falseChildren: []
@@ -94,13 +95,14 @@ function FeaturesV3({
         if (initialRows.length > 0) {
             return initialRows.map(row => ({
                 ...row,
-                conditionType: row.conditionType || (row.ifChecked ? 'IF' : 'None'),
-                standardMh: String(row.standardMh || ''),
-                isExpanded: row.isExpanded !== undefined ? row.isExpanded : (row.ifChecked || false),
-                hasChildren: row.hasChildren !== undefined ? row.hasChildren : (row.ifChecked || false),
+                conditionType: row.conditionType || 'None',
+                standardMH: String(row.standardMH || ''),
+                comment: row.comment || '',
+                isExpanded: row.isExpanded !== undefined ? row.isExpanded : (row.conditionType !== 'None'),
+                hasChildren: row.hasChildren !== undefined ? row.hasChildren : (row.conditionType !== 'None'),
                 children: row.children ? {
-                    trueChildren: row.children.trueChildren || (row.children.trueChild ? [row.children.trueChild] : []),
-                    falseChildren: row.children.falseChildren || (row.children.falseChild ? [row.children.falseChild] : [])
+                    trueChildren: row.children.trueChildren || [],
+                    falseChildren: row.children.falseChildren || []
                 } : { trueChildren: [], falseChildren: [] },
                 branchIndex: row.branchIndex !== undefined ? row.branchIndex : null
             }));
@@ -115,7 +117,7 @@ function FeaturesV3({
     const [showValidationAlert, setShowValidationAlert] = useState(false);
     const [validationMessage, setValidationMessage] = useState('');
 
-    // Default options if not provided
+    // Default options
     const defaultParamOptions = [
         { value: '000001', label: '[000001]', description: 'Param Testing Description 1' },
         { value: '000002', label: '[000002]', description: 'Param Testing Description 2' },
@@ -161,11 +163,11 @@ function FeaturesV3({
             
             const initializedRows = initialRows.map(row => ({
                 ...row,
-                isExpanded: row.isExpanded !== undefined ? row.isExpanded : (row.ifChecked || false),
-                hasChildren: row.hasChildren !== undefined ? row.hasChildren : (row.ifChecked || false),
+                isExpanded: row.isExpanded !== undefined ? row.isExpanded : (row.conditionType !== 'None'),
+                hasChildren: row.hasChildren !== undefined ? row.hasChildren : (row.conditionType !== 'None'),
                 children: row.children ? {
-                    trueChildren: row.children.trueChildren || (row.children.trueChild ? [row.children.trueChild] : []),
-                    falseChildren: row.children.falseChildren || (row.children.falseChild ? [row.children.falseChild] : [])
+                    trueChildren: row.children.trueChildren || [],
+                    falseChildren: row.children.falseChildren || []
                 } : { trueChildren: [], falseChildren: [] },
                 branchIndex: row.branchIndex !== undefined ? row.branchIndex : null
             }));
@@ -173,69 +175,55 @@ function FeaturesV3({
         }
     }, [initialRows]);
 
-    // Validation functions - Updated for LOOKUP
+    // Validation functions
     const validateRow = (row, errors = {}, path = '') => {
         const rowPath = path || row.id;
         
-        // Validate Param ID
         if (!row.paramId || row.paramId.trim() === '') {
             errors[`${rowPath}.paramId`] = 'Param ID is required';
         }
         
-        // Validate Comment
-        if (!row.userComments || row.userComments.trim() === '') {
-            errors[`${rowPath}.userComments`] = 'Comment is required';
+        if (!row.comment || row.comment.trim() === '') {
+            errors[`${rowPath}.comment`] = 'Comment is required';
         }
         
-        // None or LOOKUP: Validate basic fields
-        if (row.conditionType === 'None' || row.conditionType === 'LOOKUP') {
+        if (row.conditionType === 'None') {
             if (!row.uom || row.uom.trim() === '') {
                 errors[`${rowPath}.uom`] = 'UOM is required';
             }
             if (!row.operation || row.operation.trim() === '') {
                 errors[`${rowPath}.operation`] = 'Operation is required';
             }
-            if (row.standardMh === null || row.standardMh === undefined || row.standardMh === '') {
-                errors[`${rowPath}.standardMh`] = 'Standard MH/UOM is required';
-            } else {
-                const operation = row.operation;
-                if (operation === 'Number') {
-                    const mathRegex = /^[0-9+\-*/.()]+$/;
-                    if (!mathRegex.test(row.standardMh)) {
-                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
-                    }
-                } else if (operation === 'String') {
-                    const stringRegex = /^[A-Za-z_\- ]+$/;
-                    const hasMultipleSpaces = /\s{2,}/.test(row.standardMh);
-                    if (!stringRegex.test(row.standardMh)) {
-                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM must contain only letters, underscore, dash, and single spaces';
-                    } else if (hasMultipleSpaces) {
-                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM cannot contain multiple consecutive spaces';
-                    }
-                } else {
-                    const mathRegex = /^[0-9+\-*/.()]+$/;
-                    if (!mathRegex.test(row.standardMh)) {
-                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
-                    }
-                }
+            if (row.standardMH === null || row.standardMH === undefined || row.standardMH === '') {
+                errors[`${rowPath}.standardMH`] = 'Standard MH/UOM is required';
             }
-            
-            // LOOKUP specific: Validate it has at least 3 parameters
-            if (row.conditionType === 'LOOKUP') {
-                if (!row.children?.trueChildren || row.children.trueChildren.length < 3) {
-                    errors[`${rowPath}.children`] = 'LOOKUP requires at least 3 parameters';
-                }
+        } else if (row.conditionType === 'LOOKUP') {
+            // Validate LOOKUP parent row has basic fields like None condition
+            if (!row.paramId || row.paramId.trim() === '') {
+                errors[`${rowPath}.paramId`] = 'Param ID is required';
+            }
+            if (!row.uom || row.uom.trim() === '') {
+                errors[`${rowPath}.uom`] = 'UOM is required';
+            }
+            if (!row.operation || row.operation.trim() === '') {
+                errors[`${rowPath}.operation`] = 'Operation is required';
+            }
+            if (row.standardMH === null || row.standardMH === undefined || row.standardMH === '') {
+                errors[`${rowPath}.standardMH`] = 'Standard MH/UOM is required';
+            }
+            // Validate LOOKUP needs at least 3 children
+            if (!row.children?.trueChildren || row.children.trueChildren.length < 3) {
+                errors[`${rowPath}.children`] = 'LOOKUP requires at least 3 children (Array, Index, Value)';
             }
         } else if (row.conditionType === 'IF' || row.conditionType === 'IF-ELSE') {
-            // Validate conditional fields
             if (!row.leftType || row.leftType.trim() === '') {
                 errors[`${rowPath}.leftType`] = 'Left Type is required';
             }
             if (!row.leftValue || row.leftValue.trim() === '') {
                 errors[`${rowPath}.leftValue`] = 'Left Value is required';
             }
-            if (!row.ifCondition || row.ifCondition.trim() === '') {
-                errors[`${rowPath}.ifCondition`] = 'Condition is required';
+            if (!row.condition || row.condition.trim() === '') {
+                errors[`${rowPath}.condition`] = 'Condition is required';
             }
             if (!row.rightType || row.rightType.trim() === '') {
                 errors[`${rowPath}.rightType`] = 'Right Type is required';
@@ -243,10 +231,8 @@ function FeaturesV3({
             if (!row.rightValue || row.rightValue.trim() === '') {
                 errors[`${rowPath}.rightValue`] = 'Right Value is required';
             }
-        }
-        
-        // Validate children recursively
-        if (row.conditionType === 'IF' || row.conditionType === 'IF-ELSE' || row.conditionType === 'LOOKUP') {
+            
+            // Validate children
             if (row.children.trueChildren && row.children.trueChildren.length > 0) {
                 row.children.trueChildren.forEach((child, index) => {
                     validateRow(child, errors, `${rowPath}.true.${index}`);
@@ -282,8 +268,9 @@ function FeaturesV3({
         return Object.keys(errors).length > 0;
     };
 
+    // Helper functions
     const buildValidationPath = (row, allRows) => {
-        if (!row.parentId || row.branchFlag === null) {
+        if (!row.parentId || row.isTrueBranch === null) {
             return row.id;
         }
         
@@ -293,7 +280,7 @@ function FeaturesV3({
         }
         
         const parentPath = buildValidationPath(parent, allRows);
-        const branchType = row.branchFlag ? 'true' : 'false';
+        const branchType = row.isTrueBranch ? 'true' : 'false';
         const branchIndex = row.branchIndex !== null ? row.branchIndex : 0;
         return `${parentPath}.${branchType}.${branchIndex}`;
     };
@@ -327,38 +314,40 @@ function FeaturesV3({
     };
 
     // Create new row structure
-    const createNewRow = (id, parentId = null, branchFlag = null, branchIndex = null) => ({
+    const createNewRow = (id, parentId = null, isTrueBranch = null, branchIndex = null) => ({
         id,
         parentId,
-        branchFlag,
+        isTrueBranch,
         branchIndex,
         paramId: '',
-        description: '',
-        userComments: '',
+        paramDesc: '',
         uom: 'EA',
         operation: '*',
-        standardMh: '',
-        rowOperator: '+', // Operator to combine this row with previous rows
-        conditionType: 'None',
-        ifChecked: false,
+        standardMH: '',
+        conditionType: 'None', // DEFAULT: None condition type
+        comment: '', // NEW: Comment field
         isExpanded: false,
         hasChildren: false,
+        // Conditional fields
         leftType: 'PARAM ID',
         leftValue: '',
-        ifCondition: '==',
+        condition: '=',
         rightType: 'PARAM ID',
         rightValue: '',
+        // LOOKUP fields
+        lookupArray: '',
+        lookupIndex: '',
+        lookupValue: '',
         children: {
             trueChildren: [],
             falseChildren: []
         }
     });
 
-    // Update row data with deep copy
+    // Update row data
     const updateRow = (rowId, field, value) => {
         setRows(prevRows => {
             const newRows = JSON.parse(JSON.stringify(prevRows));
-            console.log(`🔧 Updating row ${rowId}, field: ${field}, value:`, value);
             updateRowRecursive(newRows, rowId, field, value);
             if (onDataChange) onDataChange(newRows);
             return newRows;
@@ -368,36 +357,28 @@ function FeaturesV3({
     const updateRowRecursive = (rowsList, rowId, field, value) => {
         for (let row of rowsList) {
             if (row.id === rowId) {
-                console.log(`🎯 UPDATING ROW ${rowId}: Field: ${field}, Old: ${row[field]}, New: ${value}`);
                 row[field] = value;
                 
                 if (field === 'paramId') {
                     const selectedParam = finalParamOptions.find(opt => opt.value === value);
                     if (selectedParam) {
-                        row.description = selectedParam.description || '';
+                        row.paramDesc = selectedParam.description || '';
                     }
                 }
                 return true;
             }
             
-            // Check if any child was updated - if so, mark parent as updated to trigger re-render
             if (row.children.trueChildren && updateRowRecursive(row.children.trueChildren, rowId, field, value)) {
-                // Force parent to re-render by updating its lastUpdated timestamp
-                row.lastUpdated = Date.now();
-                console.log(`🔄 Parent row ${row.id} marked for re-render due to child ${rowId} update`);
                 return true;
             }
             if (row.children.falseChildren && updateRowRecursive(row.children.falseChildren, rowId, field, value)) {
-                // Force parent to re-render by updating its lastUpdated timestamp
-                row.lastUpdated = Date.now();
-                console.log(`🔄 Parent row ${row.id} marked for re-render due to child ${rowId} update`);
                 return true;
             }
         }
         return false;
     };
 
-    // Handle Condition Type change - Updated for LOOKUP
+    // Handle Condition Type change
     const handleConditionTypeChange = (rowId, conditionType) => {
         setRows(prevRows => {
             const newRows = JSON.parse(JSON.stringify(prevRows));
@@ -413,39 +394,45 @@ function FeaturesV3({
                 row.conditionType = conditionType;
                 const hasChildren = conditionType === 'IF' || conditionType === 'IF-ELSE' || conditionType === 'LOOKUP';
                 
-                row.ifChecked = hasChildren;
                 row.hasChildren = hasChildren;
                 
                 if (hasChildren && row.children.trueChildren.length === 0 && row.children.falseChildren.length === 0) {
-                    console.log(`🔧 Creating children for parent ${rowId}, ifCondition type: ${conditionType}`);
+                    console.log(`🔧 Creating children for parent ${rowId}, condition type: ${conditionType}`);
                     
                     if (conditionType === 'IF-ELSE') {
                         const [trueChildId, falseChildId] = generateMultipleIds(2);
+                        
                         const trueChild = createNewRow(trueChildId, rowId, true, 0);
                         const falseChild = createNewRow(falseChildId, rowId, false, 0);
+                        
                         row.children.trueChildren = [trueChild];
                         row.children.falseChildren = [falseChild];
+                        
                         console.log(`✅ Created TRUE child ID: ${trueChildId}, FALSE child ID: ${falseChildId}`);
                     } else if (conditionType === 'IF') {
                         const trueChildId = generateNextId();
                         const trueChild = createNewRow(trueChildId, rowId, true, 0);
                         row.children.trueChildren = [trueChild];
                         row.children.falseChildren = [];
-                        console.log(`✅ Created TRUE child ID: ${trueChildId} for IF ifCondition`);
+                        
+                        console.log(`✅ Created child ID: ${trueChildId} for IF condition`);
                     } else if (conditionType === 'LOOKUP') {
-                        // Create 3 children for LOOKUP initially (minimum parameters)
-                        const [param1Id, param2Id, param3Id] = generateMultipleIds(3);
-                        const param1Child = createNewRow(param1Id, rowId, true, 0);
-                        const param2Child = createNewRow(param2Id, rowId, true, 1);
-                        const param3Child = createNewRow(param3Id, rowId, true, 2);
-                        row.children.trueChildren = [param1Child, param2Child, param3Child];
+                        // Create 3 children for LOOKUP (array, index, value)
+                        const [arrayId, indexId, valueId] = generateMultipleIds(3);
+                        
+                        const arrayChild = createNewRow(arrayId, rowId, true, 0);
+                        const indexChild = createNewRow(indexId, rowId, true, 1);
+                        const valueChild = createNewRow(valueId, rowId, true, 2);
+                        
+                        row.children.trueChildren = [arrayChild, indexChild, valueChild];
                         row.children.falseChildren = [];
-                        console.log(`✅ Created 3 LOOKUP parameters: Param1(${param1Id}), Param2(${param2Id}), Param3(${param3Id})`);
+                        
+                        console.log(`✅ Created 3 LOOKUP children: Array(${arrayId}), Index(${indexId}), Value(${valueId})`);
                     }
                     
                     row.isExpanded = true;
                 } else if (hasChildren) {
-                    console.log(`🔄 Switching ifCondition type to: ${conditionType} for parent ${rowId}`);
+                    console.log(`🔄 Switching condition type to: ${conditionType} for parent ${rowId}`);
                     
                     if (conditionType === 'IF') {
                         row.children.falseChildren = [];
@@ -456,6 +443,7 @@ function FeaturesV3({
                         }
                     } else if (conditionType === 'LOOKUP') {
                         row.children.falseChildren = [];
+                        // Ensure at least 3 children for LOOKUP
                         const currentCount = row.children.trueChildren.length;
                         if (currentCount < 3) {
                             const neededCount = 3 - currentCount;
@@ -486,7 +474,8 @@ function FeaturesV3({
                             }
                         }
                     }
-                } else if (!hasChildren) {
+                } else {
+                    // Remove all children for None only
                     row.children.trueChildren = [];
                     row.children.falseChildren = [];
                     row.isExpanded = false;
@@ -494,15 +483,10 @@ function FeaturesV3({
                 return true;
             }
             
-            // Check if any child's ifCondition type was updated - if so, mark parent as updated to trigger re-render
             if (row.children.trueChildren && updateConditionTypeRecursive(row.children.trueChildren, rowId, conditionType)) {
-                row.lastUpdated = Date.now();
-                console.log(`🔄 Parent row ${row.id} marked for re-render due to child ${rowId} ifCondition change`);
                 return true;
             }
             if (row.children.falseChildren && updateConditionTypeRecursive(row.children.falseChildren, rowId, conditionType)) {
-                row.lastUpdated = Date.now();
-                console.log(`🔄 Parent row ${row.id} marked for re-render due to child ${rowId} ifCondition change`);
                 return true;
             }
         }
@@ -536,43 +520,34 @@ function FeaturesV3({
     };
 
     // Add child row
-    const addChildRow = (parentRowId, branchFlag) => {
+    const addChildRow = (parentRowId, isTrueBranch) => {
         setRows(prevRows => {
             const newRows = JSON.parse(JSON.stringify(prevRows));
-            addChildRowRecursive(newRows, parentRowId, branchFlag);
+            addChildRowRecursive(newRows, parentRowId, isTrueBranch);
             if (onDataChange) onDataChange(newRows);
             return newRows;
         });
     };
 
-    const addChildRowRecursive = (rowsList, parentRowId, branchFlag) => {
+    const addChildRowRecursive = (rowsList, parentRowId, isTrueBranch) => {
         for (let row of rowsList) {
             if (row.id === parentRowId) {
-                const targetArray = branchFlag ? row.children.trueChildren : row.children.falseChildren;
+                const targetArray = isTrueBranch ? row.children.trueChildren : row.children.falseChildren;
                 const newIndex = targetArray.length;
                 const newRowId = generateNextId();
                 
-                const newChildRow = createNewRow(newRowId, parentRowId, branchFlag, newIndex);
+                const newChildRow = createNewRow(newRowId, parentRowId, isTrueBranch, newIndex);
                 targetArray.push(newChildRow);
                 
                 row.hasChildren = true;
                 row.isExpanded = true;
-                // Force parent to re-render by updating its lastUpdated timestamp
-                row.lastUpdated = Date.now();
-                console.log(`🔄 Parent row ${row.id} marked for re-render due to new child ${newRowId} added`);
                 return true;
             }
             
-            if (row.children.trueChildren && addChildRowRecursive(row.children.trueChildren, parentRowId, branchFlag)) {
-                // Mark grandparent for re-render too
-                row.lastUpdated = Date.now();
-                console.log(`🔄 Grandparent row ${row.id} marked for re-render due to nested child addition`);
+            if (row.children.trueChildren && addChildRowRecursive(row.children.trueChildren, parentRowId, isTrueBranch)) {
                 return true;
             }
-            if (row.children.falseChildren && addChildRowRecursive(row.children.falseChildren, parentRowId, branchFlag)) {
-                // Mark grandparent for re-render too
-                row.lastUpdated = Date.now();
-                console.log(`🔄 Grandparent row ${row.id} marked for re-render due to nested child addition`);
+            if (row.children.falseChildren && addChildRowRecursive(row.children.falseChildren, parentRowId, isTrueBranch)) {
                 return true;
             }
         }
@@ -580,19 +555,19 @@ function FeaturesV3({
     };
 
     // Remove child row
-    const removeChildRow = (parentRowId, branchFlag, childIndex) => {
+    const removeChildRow = (parentRowId, isTrueBranch, childIndex) => {
         setRows(prevRows => {
             const newRows = JSON.parse(JSON.stringify(prevRows));
-            removeChildRowRecursive(newRows, parentRowId, branchFlag, childIndex);
+            removeChildRowRecursive(newRows, parentRowId, isTrueBranch, childIndex);
             if (onDataChange) onDataChange(newRows);
             return newRows;
         });
     };
 
-    const removeChildRowRecursive = (rowsList, parentRowId, branchFlag, childIndex) => {
+    const removeChildRowRecursive = (rowsList, parentRowId, isTrueBranch, childIndex) => {
         for (let row of rowsList) {
             if (row.id === parentRowId) {
-                const targetArray = branchFlag ? row.children.trueChildren : row.children.falseChildren;
+                const targetArray = isTrueBranch ? row.children.trueChildren : row.children.falseChildren;
                 
                 if (childIndex >= 0 && childIndex < targetArray.length) {
                     targetArray.splice(childIndex, 1);
@@ -606,122 +581,61 @@ function FeaturesV3({
                 return true;
             }
             
-            if (row.children.trueChildren && removeChildRowRecursive(row.children.trueChildren, parentRowId, branchFlag, childIndex)) {
+            if (row.children.trueChildren && removeChildRowRecursive(row.children.trueChildren, parentRowId, isTrueBranch, childIndex)) {
                 return true;
             }
-            if (row.children.falseChildren && removeChildRowRecursive(row.children.falseChildren, parentRowId, branchFlag, childIndex)) {
+            if (row.children.falseChildren && removeChildRowRecursive(row.children.falseChildren, parentRowId, isTrueBranch, childIndex)) {
                 return true;
             }
         }
         return false;
     };
 
-    // Generate formula preview - Updated for LOOKUP
+    // Generate formula preview
     const generateFormula = (row) => {
         if (row.conditionType === 'None') {
             const paramDisplay = row.paramId ? `[${row.paramId}]` : '[PARAM]';
-            const standardMh = String(row.standardMh || '');
+            const standardMH = String(row.standardMH || '');
             const operation = row.operation || '*';
             
             if (operation === 'Number' || operation === 'String') {
-                if (!standardMh || standardMh.trim() === '') {
+                if (!standardMH || standardMH.trim() === '') {
                     return operation === 'Number' ? '0' : 'EMPTY_STRING';
                 }
-                return standardMh;
+                return standardMH;
             } else {
-                if (!standardMh || standardMh.trim() === '' || standardMh === '0') {
+                if (!standardMH || standardMH.trim() === '' || standardMH === '0') {
                     return paramDisplay;
                 }
-                return `${paramDisplay} ${operation} ${standardMh}`;
+                return `${paramDisplay} ${operation} ${standardMH}`;
             }
         } else if (row.conditionType === 'LOOKUP') {
-            // LOOKUP formula: All children are parameters for the LOOKUP function
+            // LOOKUP formula: Extract [array], [index], [value] from first 3 children
+            // Remaining children are multiplied with the LOOKUP result
             const children = row.children?.trueChildren || [];
             
             if (children.length === 0) {
-                return 'LOOKUP(NO_PARAMS)';
+                return 'LOOKUP(NO_CHILDREN)';
             }
             
-            // Build LOOKUP with all child parameters
-            const params = children.map((child, index) => {
-                console.log(`🔍 LOOKUP Param ${index + 1}:`, {
-                    id: child.id,
-                    paramId: child.paramId,
-                    operation: child.operation,
-                    standardMh: child.standardMh,
-                    conditionType: child.conditionType
-                });
-                
-                // If child has its own ifCondition (IF, IF-ELSE, nested LOOKUP), generate its formula recursively
-                if (child.conditionType && child.conditionType !== 'None') {
-                    const formula = generateFormula(child);
-                    console.log(`  ➜ Nested formula for Param ${index + 1}:`, formula);
-                    return formula;
-                }
-                
-                // For 'None' ifCondition children, generate their basic formula
-                if (!child.paramId || child.paramId.trim() === '') {
-                    console.log(`  ➜ Param ${index + 1}: No paramId, returning PARAM`);
-                    return 'PARAM';
-                }
-                
-                // Check if it's a text/string value (contains quotes or text)
-                const paramValue = child.paramId;
-                
-                // If it looks like a number parameter ID, wrap in brackets
-                if (/^\d+$/.test(paramValue)) {
-                    // Check if there's an operation and standardMh
-                    const standardMh = String(child.standardMh || '');
-                    const operation = child.operation || '*';
-                    
-                    if (operation === 'Number' || operation === 'String') {
-                        if (!standardMh || standardMh.trim() === '') {
-                            return operation === 'Number' ? '0' : 'EMPTY_STRING';
-                        }
-                        return standardMh;
-                    } else {
-                        // For LOOKUP parameters, include the operation and standardMh if present
-                        if (!standardMh || standardMh.trim() === '') {
-                            console.log(`  ➜ No standardMh, returning [${paramValue}]`);
-                            return `[${paramValue}]`;
-                        }
-                        // Only skip operation if standardMh is explicitly 0
-                        if (standardMh === '0') {
-                            console.log(`  ➜ standardMh=0, returning [${paramValue}]`);
-                            return `[${paramValue}]`;
-                        }
-                        // Always show the operation and value for LOOKUP parameters (even * 1)
-                        const result = `[${paramValue}] ${operation} ${standardMh}`;
-                        console.log(`  ➜ Returning: ${result}`);
-                        return result;
-                    }
-                }
-                
-                // If it contains brackets already, use as-is
-                if (paramValue.startsWith('[') && paramValue.endsWith(']')) {
-                    return paramValue;
-                }
-                
-                // If it's a string literal (starts with quote), use as-is
-                if (paramValue.startsWith("'") || paramValue.startsWith('"')) {
-                    return paramValue;
-                }
-                
-                // If it looks like a variable name (uppercase letters, underscores)
-                if (/^[A-Z_]+$/.test(paramValue)) {
-                    return paramValue;
-                }
-                
-                // If it contains curly braces (like {ML_CODE}), use as-is
-                if (paramValue.includes('{') && paramValue.includes('}')) {
-                    return paramValue;
-                }
-                
-                // Default: treat as text and add quotes
-                return `'${paramValue}'`;
-            });
+            // First 3 children are the LOOKUP parameters (array, index, value)
+            const array = children[0] ? `[${children[0].paramId || 'ARRAY'}]` : '[ARRAY]';
+            const index = children[1] ? `[${children[1].paramId || 'INDEX'}]` : '[INDEX]';
+            const value = children[2] ? `[${children[2].paramId || 'VALUE'}]` : '[VALUE]';
             
-            return `LOOKUP(${params.join(', ')})`;
+            const lookupFormula = `LOOKUP(${array}, ${index}, ${value})`;
+            
+            // If more than 3 children, multiply LOOKUP result with remaining children
+            if (children.length > 3) {
+                const additionalChildren = children.slice(3);
+                const additionalFormula = additionalChildren.length === 1 
+                    ? generateFormula(additionalChildren[0])
+                    : `(${additionalChildren.map(child => generateFormula(child)).join(' + ')})`;
+                
+                return `${lookupFormula} * ${additionalFormula}`;
+            }
+            
+            return lookupFormula;
         } else {
             // IF and IF-ELSE conditions
             const formatValueForFormula = (value, type) => {
@@ -739,29 +653,23 @@ function FeaturesV3({
             };
 
             const leftVal = formatValueForFormula(row.leftValue, row.leftType);
-            const ifCondition = row.ifCondition || '=';
+            const condition = row.condition || '=';
             const rightVal = formatValueForFormula(row.rightValue, row.rightType);
             
             const generateChildrenFormula = (children) => {
                 if (children.length === 0) return 'NO_FORMULA';
                 if (children.length === 1) return generateFormula(children[0]);
                 
-                // Build formula using each child's rowOperator
-                let formula = `(${generateFormula(children[0])})`;
-                for (let i = 1; i < children.length; i++) {
-                    const childOperator = children[i].rowOperator || '+';
-                    formula += ` ${childOperator} (${generateFormula(children[i])})`;
-                }
-                return formula;
+                return `(${children.map(child => generateFormula(child)).join(' + ')})`;
             };
             
             const trueFormula = generateChildrenFormula(row.children.trueChildren);
             
             if (row.conditionType === 'IF') {
-                return `IF(${leftVal} ${ifCondition} ${rightVal}, ${trueFormula})`;
+                return `IF(${leftVal} ${condition} ${rightVal}, ${trueFormula})`;
             } else if (row.conditionType === 'IF-ELSE') {
                 const falseFormula = generateChildrenFormula(row.children.falseChildren);
-                return `IF(${leftVal} ${ifCondition} ${rightVal}, ${trueFormula}, ${falseFormula})`;
+                return `IF(${leftVal} ${condition} ${rightVal}, ${trueFormula}, ${falseFormula})`;
             }
         }
     };
@@ -869,31 +777,16 @@ function FeaturesV3({
         
         return filteredRows.map(row => {
             const updatedRow = { ...row };
-            let childrenChanged = false;
             
             if (updatedRow.children.trueChildren && updatedRow.children.trueChildren.length > 0) {
-                const originalLength = updatedRow.children.trueChildren.length;
                 updatedRow.children.trueChildren = removeRowRecursive(updatedRow.children.trueChildren, rowId);
-                if (originalLength !== updatedRow.children.trueChildren.length) {
-                    childrenChanged = true;
-                }
             }
             
             if (updatedRow.children.falseChildren && updatedRow.children.falseChildren.length > 0) {
-                const originalLength = updatedRow.children.falseChildren.length;
                 updatedRow.children.falseChildren = removeRowRecursive(updatedRow.children.falseChildren, rowId);
-                if (originalLength !== updatedRow.children.falseChildren.length) {
-                    childrenChanged = true;
-                }
             }
             
             updatedRow.hasChildren = updatedRow.children.trueChildren.length > 0 || updatedRow.children.falseChildren.length > 0;
-            
-            // If any children were removed, mark parent for re-render
-            if (childrenChanged) {
-                updatedRow.lastUpdated = Date.now();
-                console.log(`🔄 Parent row ${updatedRow.id} marked for re-render due to child ${rowId} deletion`);
-            }
             
             return updatedRow;
         });
@@ -904,13 +797,7 @@ function FeaturesV3({
         if (rows.length === 0) return '';
         if (rows.length === 1) return generateFormula(rows[0]);
         
-        // Build formula using each row's rowOperator
-        let formula = `(${generateFormula(rows[0])})`;
-        for (let i = 1; i < rows.length; i++) {
-            const rowOperator = rows[i].rowOperator || '+';
-            formula += ` ${rowOperator} (${generateFormula(rows[i])})`;
-        }
-        return formula;
+        return rows.map(row => `(${generateFormula(row)})`).join(' + ');
     };
 
     // Save data
@@ -935,66 +822,79 @@ function FeaturesV3({
             
             setValidationMessage(message);
             setShowValidationAlert(true);
+            
             alert(`Validation Failed!\n\n${message}\n\nPlease fix the errors and try again.`);
             return;
         }
         
-        console.log('=== FeaturesV3 Data Export ===');
-        console.log('Validation Status: PASSED ✅');
-        console.log('Complete Formula:', generateCompleteFormula());
-        console.log('Rows Data (Component Format):', JSON.stringify(rows, null, 2));
-        console.log('Total Rows:', rows.length);
+        // Database format with correct column names
+        const dbFormatRows = [];
         
-        try {
-            const dbData = prepareEnhancedDataForDatabase(rows);
-            
-            // Enhance database data with formula preview for each row
-            const enhancedDbData = dbData.map(dbRow => {
-                // Find the original component row to generate its formula
-                const findRowById = (rows, id) => {
-                    for (const row of rows) {
-                        if (row.id === id) return row;
-                        const trueResult = findRowById(row.children.trueChildren, id);
-                        if (trueResult) return trueResult;
-                        const falseResult = findRowById(row.children.falseChildren, id);
-                        if (falseResult) return falseResult;
-                    }
-                    return null;
-                };
-                
-                const componentRow = findRowById(rows, dbRow.id);
-                const formula = componentRow ? generateFormula(componentRow) : 'N/A';
-                
-                return {
-                    ...dbRow,
-                    formulaPreview: formula // Add formula preview to each row
-                };
+        const flattenRow = (row, parentId = null, isTrueBranch = null, branchIndex = null) => {
+            // Main row
+            dbFormatRows.push({
+                id: row.id,
+                conditionType: row.conditionType,
+                parentId: parentId,
+                isTrueBranch: isTrueBranch,
+                branchIndex: branchIndex,
+                paramId: row.paramId,
+                operation: row.operation || '',
+                standardMH: row.standardMH || '',
+                leftType: row.leftType || '',
+                leftValue: row.leftValue || '',
+                condition: row.condition || '',
+                rightType: row.rightType || '',
+                rightValue: row.rightValue || '',
+                uom: row.uom || '',
+                comment: row.comment || '',
+                // LOOKUP fields
+                lookupArray: row.lookupArray || '',
+                lookupIndex: row.lookupIndex || '',
+                lookupValue: row.lookupValue || ''
             });
             
-            console.log('💾 Rows Data for DB (Flat Structure):', JSON.stringify(enhancedDbData, null, 2));
-            console.log('📋 Database Rows Count:', enhancedDbData.length);
-            console.log('✅ Database transformation completed successfully!');
-        } catch (error) {
-            console.error('❌ Error transforming to database format:', error);
-        }
+            // TRUE children
+            if (row.children.trueChildren) {
+                row.children.trueChildren.forEach((child, index) => {
+                    flattenRow(child, row.id, true, index);
+                });
+            }
+            
+            // FALSE children
+            if (row.children.falseChildren) {
+                row.children.falseChildren.forEach((child, index) => {
+                    flattenRow(child, row.id, false, index);
+                });
+            }
+        };
         
+        rows.forEach(row => flattenRow(row));
+        
+        console.log('=== FeaturesV2 Data Export ===');
+        console.log('Validation Status: PASSED ✅');
+        console.log('Complete Formula:', generateCompleteFormula());
+        console.log('Database Format (with correct column names):', JSON.stringify(dbFormatRows, null, 2));
+        console.log('Total Database Rows:', dbFormatRows.length);
         console.log('Timestamp:', new Date().toISOString());
-        alert('✅ Validation Passed!\n\nData saved to console successfully!\nCheck browser console for both Component and Database formats.');
+        
+        alert('✅ Validation Passed!\n\nData saved to console successfully!\nCheck browser console for Database format.');
     };
 
-    // Render children section - Enhanced for LOOKUP
-    const renderChildrenSection = (row, branchFlag) => {
-        const children = branchFlag ? row.children.trueChildren : row.children.falseChildren;
+    // Render children section
+    const renderChildrenSection = (row, isTrueBranch) => {
+        const children = isTrueBranch ? row.children.trueChildren : row.children.falseChildren;
         
+        // For LOOKUP, show different label and color
         let branchName, branchColor, backgroundColor;
         if (row.conditionType === 'LOOKUP') {
             branchName = 'LOOKUP Children';
-            branchColor = '#ff9800';
+            branchColor = '#ff9800'; // Orange for LOOKUP
             backgroundColor = '#fff3e0';
         } else {
-            branchName = branchFlag ? 'TRUE' : 'FALSE';
-            branchColor = branchFlag ? '#4caf50' : '#f44336';
-            backgroundColor = branchFlag ? '#e8f5e8' : '#ffebee';
+            branchName = isTrueBranch ? 'TRUE' : 'FALSE';
+            branchColor = isTrueBranch ? '#4caf50' : '#f44336';
+            backgroundColor = isTrueBranch ? '#e8f5e8' : '#ffebee';
         }
         
         return (
@@ -1014,7 +914,7 @@ function FeaturesV3({
                     <Tooltip title={`Add new row to ${branchName}`}>
                         <IconButton
                             size="small"
-                            onClick={() => addChildRow(row.id, branchFlag)}
+                            onClick={() => addChildRow(row.id, isTrueBranch)}
                             style={{ color: branchColor }}
                         >
                             <AddIcon />
@@ -1023,12 +923,16 @@ function FeaturesV3({
                 </div>
                 
                 {children.map((child, index) => {
+                    // For LOOKUP, show special labels for first 3 children
                     let rowLabel = `Row ${index + 1}:`;
                     if (row.conditionType === 'LOOKUP') {
-                        rowLabel = `🔍 Param ${index + 1}:`;
+                        if (index === 0) rowLabel = '🔍 Array Param:';
+                        else if (index === 1) rowLabel = '🔍 Index Param:';
+                        else if (index === 2) rowLabel = '🔍 Value Param:';
+                        else rowLabel = `📊 Multiplier ${index - 2}:`; // Additional rows for multiplication
                     }
                     
-                    // For LOOKUP, first 3 children cannot be removed (minimum required)
+                    // For LOOKUP, first 3 children cannot be removed (required params)
                     const canRemove = row.conditionType === 'LOOKUP' ? (index >= 3 && children.length > 3) : children.length > 1;
                     
                     return (
@@ -1046,7 +950,7 @@ function FeaturesV3({
                                     <Tooltip title={`Remove this row from ${branchName} branch`}>
                                         <IconButton
                                             size="small"
-                                            onClick={() => removeChildRow(row.id, branchFlag, index)}
+                                            onClick={() => removeChildRow(row.id, isTrueBranch, index)}
                                             style={{ color: '#f44336', marginRight: '10px' }}
                                         >
                                             <RemoveIcon />
@@ -1054,7 +958,7 @@ function FeaturesV3({
                                     </Tooltip>
                                 )}
                             </div>
-                            {renderRow(child, true, index, 0, row.conditionType)}
+                            {renderRow(child, true, index)}
                         </div>
                     );
                 })}
@@ -1077,7 +981,7 @@ function FeaturesV3({
     };
 
     // Enhanced row rendering
-    const renderRow = (row, isChild = false, childIndex = null, rowIndex = 0, parentConditionType = null) => (
+    const renderRow = (row, isChild = false, childIndex = null) => (
         <div key={row.id} className={isChild ? 'custom-child-row' : 'row'}>
             <div className='custom-row border-bottom'>
                 
@@ -1095,29 +999,10 @@ function FeaturesV3({
                     )}
                 </div>
 
-                {/* Row Operator - Only show for root rows (not first) */}
-                {!isChild && rowIndex > 0 && (
-                    <div className='col-block w60'>
-                        <FormControl variant="outlined" size="small" fullWidth>
-                            <InputLabel>Row Op</InputLabel>
-                            <Select
-                                value={row.rowOperator || '+'}
-                                onChange={(e) => updateRow(row.id, 'rowOperator', e.target.value)}
-                                label="Row Op"
-                            >
-                                <MenuItem value="+">+</MenuItem>
-                                <MenuItem value="*">×</MenuItem>
-                                <MenuItem value="/">÷</MenuItem>
-                                <MenuItem value="-">−</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </div>
-                )}
-
                 {/* TRUE/FALSE Indicator for child rows */}
                 {isChild && (
-                    <div className={`col-block col-ifCondition ${row.branchFlag ? 'true' : 'false'} w40`}>
-                        {row.branchFlag ? <DoneIcon /> : <ClearIcon />}
+                    <div className={`col-block col-condition ${row.isTrueBranch ? 'true' : 'false'} w40`}>
+                        {row.isTrueBranch ? <DoneIcon /> : <ClearIcon />}
                         {childIndex !== null && (
                             <Typography variant="caption" style={{ marginLeft: '4px' }}>
                                 {childIndex + 1}
@@ -1126,173 +1011,7 @@ function FeaturesV3({
                     </div>
                 )}
 
-                {/* Row Operator for child rows (not first child, and not LOOKUP children) */}
-                {isChild && childIndex > 0 && parentConditionType !== 'LOOKUP' && (
-                    <div className='col-block w60'>
-                        <FormControl variant="outlined" size="small" fullWidth>
-                            <InputLabel>Row Op</InputLabel>
-                            <Select
-                                value={row.rowOperator || '+'}
-                                onChange={(e) => updateRow(row.id, 'rowOperator', e.target.value)}
-                                label="Row Op"
-                            >
-                                <MenuItem value="+">+</MenuItem>
-                                <MenuItem value="*">×</MenuItem>
-                                <MenuItem value="/">÷</MenuItem>
-                                <MenuItem value="-">−</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </div>
-                )}
-
-                {/* Param ID - Searchable */}
-                <div className='col-block'>
-                    <Autocomplete
-                        value={finalParamOptions.find(option => option.value === row.paramId) || null}
-                        onChange={(event, newValue) => {
-                            updateRow(row.id, 'paramId', newValue ? newValue.value : '');
-                        }}
-                        options={finalParamOptions}
-                        getOptionLabel={(option) => option.label || ''}
-                        getOptionSelected={(option, value) => option.value === value.value}
-                        size="small"
-                        renderInput={(params) => (
-                            <TextField
-                                {...params}
-                                label="Param ID"
-                                variant="outlined"
-                                error={hasFieldError(row, 'paramId')}
-                                placeholder="Search Param ID..."
-                            />
-                        )}
-                        renderOption={(option) => (
-                            <div>
-                                <strong>{option.label}</strong>
-                                {option.description && (
-                                    <div style={{ fontSize: '0.8em', color: '#666' }}>
-                                        {option.description}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        noOptionsText="No matching Param ID found"
-                        clearOnEscape
-                        openOnFocus
-                    />
-                </div>
-
-                {/* Param Description */}
-                <div className='col-block w200'>
-                    <TextField
-                        label="Param Description"
-                        value={row.description}
-                        variant="outlined"
-                        size="small"
-                        disabled
-                    />
-                </div>
-
-                {/* UOM - Disabled for IF/IF-ELSE */}
-                <div className='col-block'>
-                    <Autocomplete
-                        value={finalUomOptions.find(option => option.value === row.uom) || null}
-                        onChange={(event, newValue) => {
-                            updateRow(row.id, 'uom', newValue ? newValue.value : '');
-                        }}
-                        options={finalUomOptions}
-                        getOptionLabel={(option) => option.label || ''}
-                        getOptionSelected={(option, value) => option.value === value.value}
-                        size="small"
-                        disabled={row.conditionType === 'IF' || row.conditionType === 'IF-ELSE'}
-                        renderInput={(params) => (
-                            <TextField
-                                {...params}
-                                label="UOM"
-                                variant="outlined"
-                                error={hasFieldError(row, 'uom')}
-                                placeholder="Search UOM..."
-                            />
-                        )}
-                        noOptionsText="No matching UOM found"
-                        clearOnEscape
-                        openOnFocus
-                    />
-                </div>
-
-                {/* Operation - Disabled for IF/IF-ELSE */}
-                <div className='col-block'>
-                    <Autocomplete
-                        value={operationOptions.find(op => op === row.operation) || null}
-                        onChange={(event, newValue) => {
-                            updateRow(row.id, 'operation', newValue || '');
-                        }}
-                        options={operationOptions}
-                        getOptionLabel={(option) => option}
-                        size="small"
-                        disabled={row.conditionType === 'IF' || row.conditionType === 'IF-ELSE'}
-                        renderInput={(params) => (
-                            <TextField
-                                {...params}
-                                label="Operation"
-                                variant="outlined"
-                                error={hasFieldError(row, 'operation')}
-                                placeholder="Search Operation..."
-                            />
-                        )}
-                        renderOption={(option) => (
-                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <span style={{ fontWeight: 'bold', marginRight: '8px' }}>{option}</span>
-                                {option === 'Number' && <span style={{ color: '#666', fontSize: '0.8em' }}>(Numeric values)</span>}
-                                {option === 'String' && <span style={{ color: '#666', fontSize: '0.8em' }}>(Text values)</span>}
-                            </div>
-                        )}
-                        noOptionsText="No matching operation found"
-                        clearOnEscape
-                        openOnFocus
-                    />
-                </div>
-
-                {/* Standard MH/UOM */}
-                <div className='col-block'>
-                    <TextField
-                        label="Standard MH/UOM"
-                        type="text"
-                        value={String(row.standardMh || '')}
-                        onChange={(e) => {
-                            const value = e.target.value;
-                            const operation = row.operation;
-                            
-                            if (operation === 'Number') {
-                                const mathRegex = /^[0-9+\-*/.()]*$/;
-                                if (mathRegex.test(value)) {
-                                    updateRow(row.id, 'standardMh', value);
-                                }
-                            } else if (operation === 'String') {
-                                const stringRegex = /^[A-Za-z_\- ]*$/;
-                                const hasMultipleSpaces = /\s{2,}/.test(value);
-                                if (stringRegex.test(value) && !hasMultipleSpaces) {
-                                    updateRow(row.id, 'standardMh', value);
-                                }
-                            } else {
-                                const mathRegex = /^[0-9+\-*/.()]*$/;
-                                if (mathRegex.test(value)) {
-                                    updateRow(row.id, 'standardMh', value);
-                                }
-                            }
-                        }}
-                        variant="outlined"
-                        size="small"
-                        disabled={row.conditionType === 'IF' || row.conditionType === 'IF-ELSE'}
-                        error={hasFieldError(row, 'standardMh')}
-                        placeholder={
-                            row.operation === 'Number' ? "e.g. 10, (2+3)*4, 15.5" :
-                            row.operation === 'String' ? "e.g. Product_Name, Test-Case" :
-                            "e.g. 10, (2+3)*4, 15.5"
-                        }
-                    />
-                </div>
-
-                {/* CONDITION TYPE DROPDOWN - Now includes LOOKUP */}
+                {/* CHANGE 2: CONDITION TYPE DROPDOWN - MOVED BEFORE PARAM ID */}
                 <div className='col-block w120'>
                     <FormControl 
                         variant="outlined" 
@@ -1314,7 +1033,139 @@ function FeaturesV3({
                     </FormControl>
                 </div>
 
-                {/* Conditional Fields - Only for IF/IF-ELSE */}
+                {/* CHANGE 3,4,5: CONDITIONAL FIELD DISPLAY BASED ON CONDITION TYPE */}
+                
+                {/* NONE CONDITION: Show basic fields */}
+                {row.conditionType === 'None' && (
+                    <>
+                        {/* Param ID */}
+                        <div className='col-block'>
+                            <Autocomplete
+                                value={finalParamOptions.find(option => option.value === row.paramId) || null}
+                                onChange={(event, newValue) => {
+                                    updateRow(row.id, 'paramId', newValue ? newValue.value : '');
+                                }}
+                                options={finalParamOptions}
+                                getOptionLabel={(option) => option.label || ''}
+                                getOptionSelected={(option, value) => option.value === value.value}
+                                size="small"
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Param ID"
+                                        variant="outlined"
+                                        error={hasFieldError(row, 'paramId')}
+                                        placeholder="Search Param ID..."
+                                    />
+                                )}
+                                renderOption={(option) => (
+                                    <div>
+                                        <strong>{option.label}</strong>
+                                        {option.description && (
+                                            <div style={{ fontSize: '0.8em', color: '#666' }}>
+                                                {option.description}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                noOptionsText="No matching Param ID found"
+                                clearOnEscape
+                                openOnFocus
+                            />
+                        </div>
+
+                        {/* Param Description */}
+                        <div className='col-block w200'>
+                            <TextField
+                                label="Param Description"
+                                value={row.paramDesc}
+                                variant="outlined"
+                                size="small"
+                                disabled
+                            />
+                        </div>
+
+                        {/* UOM */}
+                        <div className='col-block'>
+                            <Autocomplete
+                                value={finalUomOptions.find(option => option.value === row.uom) || null}
+                                onChange={(event, newValue) => {
+                                    updateRow(row.id, 'uom', newValue ? newValue.value : '');
+                                }}
+                                options={finalUomOptions}
+                                getOptionLabel={(option) => option.label || ''}
+                                getOptionSelected={(option, value) => option.value === value.value}
+                                size="small"
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="UOM"
+                                        variant="outlined"
+                                        error={hasFieldError(row, 'uom')}
+                                        placeholder="Search UOM..."
+                                    />
+                                )}
+                                noOptionsText="No matching UOM found"
+                                clearOnEscape
+                                openOnFocus
+                            />
+                        </div>
+
+                        {/* Operation */}
+                        <div className='col-block'>
+                            <Autocomplete
+                                value={operationOptions.find(op => op === row.operation) || null}
+                                onChange={(event, newValue) => {
+                                    updateRow(row.id, 'operation', newValue || '');
+                                }}
+                                options={operationOptions}
+                                getOptionLabel={(option) => option}
+                                size="small"
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Operation"
+                                        variant="outlined"
+                                        error={hasFieldError(row, 'operation')}
+                                        placeholder="Search Operation..."
+                                    />
+                                )}
+                                renderOption={(option) => (
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <span style={{ fontWeight: 'bold', marginRight: '8px' }}>{option}</span>
+                                        {option === 'Number' && <span style={{ color: '#666', fontSize: '0.8em' }}>(Numeric values)</span>}
+                                        {option === 'String' && <span style={{ color: '#666', fontSize: '0.8em' }}>(Text values)</span>}
+                                    </div>
+                                )}
+                                noOptionsText="No matching operation found"
+                                clearOnEscape
+                                openOnFocus
+                            />
+                        </div>
+
+                        {/* Standard MH/UOM */}
+                        <div className='col-block'>
+                            <TextField
+                                label="Standard MH/UOM"
+                                type="text"
+                                value={String(row.standardMH || '')}
+                                onChange={(e) => {
+                                    updateRow(row.id, 'standardMH', e.target.value);
+                                }}
+                                variant="outlined"
+                                size="small"
+                                error={hasFieldError(row, 'standardMH')}
+                            />
+                        </div>
+
+                        {/* Formula Preview */}
+                        <div className='col-block formula-preview'>
+                            <span>{generateFormula(row)}</span>
+                        </div>
+                    </>
+                )}
+
+                {/* IF AND IF-ELSE CONDITIONS: Show conditional fields */}
                 {(row.conditionType === 'IF' || row.conditionType === 'IF-ELSE') && (
                     <>
                         {/* Left Type */}
@@ -1348,14 +1199,14 @@ function FeaturesV3({
                             <FormControl 
                                 variant="outlined" 
                                 size="small"
-                                error={hasFieldError(row, 'ifCondition')}
+                                error={hasFieldError(row, 'condition')}
                             >
-                                <InputLabel error={hasFieldError(row, 'ifCondition')}>Condition</InputLabel>
+                                <InputLabel error={hasFieldError(row, 'condition')}>Condition</InputLabel>
                                 <Select
-                                    value={row.ifCondition}
-                                    onChange={(e) => updateRow(row.id, 'ifCondition', e.target.value)}
+                                    value={row.condition}
+                                    onChange={(e) => updateRow(row.id, 'condition', e.target.value)}
                                     label="Condition"
-                                    error={hasFieldError(row, 'ifCondition')}
+                                    error={hasFieldError(row, 'condition')}
                                 >
                                     {conditionOptions.map(cond => (
                                         <MenuItem key={cond} value={cond}>{cond}</MenuItem>
@@ -1392,20 +1243,133 @@ function FeaturesV3({
                     </>
                 )}
 
-                {/* Formula Preview */}
-                <div className='col-block formula-preview' key={`formula-${row.id}-${row.lastUpdated || 0}`}>
+                {/* CHANGE 6: LOOKUP CONDITION: Show same basic fields as None - LOOKUP params are in children */}
+                {row.conditionType === 'LOOKUP' && (
+                    <>
+                        {/* Param ID */}
+                        <div className='col-block'>
+                            <Autocomplete
+                                value={finalParamOptions.find(option => option.value === row.paramId) || null}
+                                onChange={(event, newValue) => {
+                                    updateRow(row.id, 'paramId', newValue ? newValue.value : '');
+                                }}
+                                options={finalParamOptions}
+                                getOptionLabel={(option) => option.label || ''}
+                                getOptionSelected={(option, value) => option.value === value.value}
+                                size="small"
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Param ID"
+                                        variant="outlined"
+                                        error={hasFieldError(row, 'paramId')}
+                                        placeholder="Search Param ID..."
+                                    />
+                                )}
+                                renderOption={(option) => (
+                                    <div>
+                                        <strong>{option.label}</strong>
+                                        {option.description && (
+                                            <div style={{ fontSize: '0.8em', color: '#666' }}>
+                                                {option.description}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                noOptionsText="No matching Param ID found"
+                                clearOnEscape
+                                openOnFocus
+                            />
+                        </div>
+
+                        {/* Param Description */}
+                        <div className='col-block w200'>
+                            <TextField
+                                label="Param Description"
+                                value={row.paramDesc}
+                                variant="outlined"
+                                size="small"
+                                disabled
+                            />
+                        </div>
+
+                        {/* UOM */}
+                        <div className='col-block'>
+                            <Autocomplete
+                                value={finalUomOptions.find(option => option.value === row.uom) || null}
+                                onChange={(event, newValue) => {
+                                    updateRow(row.id, 'uom', newValue ? newValue.value : '');
+                                }}
+                                options={finalUomOptions}
+                                getOptionLabel={(option) => option.label || ''}
+                                getOptionSelected={(option, value) => option.value === value.value}
+                                size="small"
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="UOM"
+                                        variant="outlined"
+                                        error={hasFieldError(row, 'uom')}
+                                        placeholder="Search UOM..."
+                                    />
+                                )}
+                                noOptionsText="No matching UOM found"
+                                clearOnEscape
+                                openOnFocus
+                            />
+                        </div>
+
+                        {/* Operation */}
+                        <div className='col-block'>
+                            <FormControl 
+                                variant="outlined" 
+                                size="small"
+                                error={hasFieldError(row, 'operation')}
+                            >
+                                <InputLabel error={hasFieldError(row, 'operation')}>Operation</InputLabel>
+                                <Select
+                                    value={row.operation}
+                                    onChange={(e) => updateRow(row.id, 'operation', e.target.value)}
+                                    label="Operation"
+                                    error={hasFieldError(row, 'operation')}
+                                >
+                                    <MenuItem value="+">+</MenuItem>
+                                    <MenuItem value="-">-</MenuItem>
+                                    <MenuItem value="*">*</MenuItem>
+                                    <MenuItem value="/">/</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </div>
+
+                        {/* Standard MH/UOM */}
+                        <div className='col-block'>
+                            <TextField
+                                label="Standard MH/UOM"
+                                value={row.standardMH}
+                                onChange={(e) => updateRow(row.id, 'standardMH', e.target.value)}
+                                variant="outlined"
+                                size="small"
+                                type="number"
+                                error={hasFieldError(row, 'standardMH')}
+                            />
+                        </div>
+                    </>
+                )}
+
+                {/* Formula Preview - Show for all condition types */}
+                <div className='col-block formula-preview'>
                     <span>{generateFormula(row)}</span>
                 </div>
 
-                {/* Comment */}
+                {/* Comment - Show for all condition types */}
                 <div className='col-block w200'>
                     <TextField
                         label="Comment"
-                        value={row.userComments}
-                        onChange={(e) => updateRow(row.id, 'userComments', e.target.value)}
+                        value={row.comment}
+                        onChange={(e) => updateRow(row.id, 'comment', e.target.value)}
                         variant="outlined"
                         size="small"
-                        error={hasFieldError(row, 'userComments')}
+                        error={hasFieldError(row, 'comment')}
                     />
                 </div>
 
@@ -1432,7 +1396,7 @@ function FeaturesV3({
                 <div className='custom-child-container' style={{ marginLeft: '20px', marginTop: '10px' }}>
                     <Divider style={{ margin: '10px 0' }} />
                     
-                    {/* TRUE Branch / LOOKUP Children */}
+                    {/* TRUE Branch for IF/IF-ELSE, or Single Branch for LOOKUP */}
                     {renderChildrenSection(row, true)}
                     
                     {/* FALSE Branch - Only for IF-ELSE */}
@@ -1450,7 +1414,7 @@ function FeaturesV3({
             <Paper elevation={2} style={{ padding: '20px', marginBottom: '20px' }}>
                 <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
                     <Typography variant="h5" component="h2">
-                        🎯 FeaturesV3 - IF Builder with LOOKUP
+                        🚀 FeaturesV2 - Enhanced Formula Builder with LOOKUP
                     </Typography>
                     <Box>
                         <Button
@@ -1481,9 +1445,9 @@ function FeaturesV3({
                         borderRadius: '4px',
                         border: '1px solid #2196f3'
                     }}>
-                        ✨ <strong>FeaturesV3 Enhancements:</strong> Choose ifCondition type (None/IF/IF-ELSE/LOOKUP)! 
-                        🔍 LOOKUP supports dynamic parameters (3, 4, 5, 6, 7, or more). Parent row keeps basic fields, children are LOOKUP parameters.
-                        Click the <AddIcon style={{ fontSize: '16px', verticalAlign: 'middle' }} /> button to add more parameters.
+                        ✨ <strong>FeaturesV2 Enhancements:</strong> Choose condition type (None/IF/IF-ELSE/LOOKUP)! 
+                        LOOKUP works like Excel: LOOKUP([array], [index], [value]). 
+                        New row default is "None". Condition field moved before Param ID.
                     </Typography>
                 </Box>
                 
@@ -1513,7 +1477,7 @@ function FeaturesV3({
             {/* Formula Build Form */}
             <div className='formula-build-form'>
                 {rows.length > 0 ? (
-                    rows.map((row, index) => renderRow(row, false, null, index))
+                    rows.map(row => renderRow(row))
                 ) : (
                     <div style={{ 
                         padding: '40px', 
@@ -1567,4 +1531,4 @@ function FeaturesV3({
     );
 }
 
-export default FeaturesV3;
+export default FeaturesV2;

@@ -18,148 +18,148 @@ function FeaturesV3Example() {
     const customInitialRows = [{
         "id": 1,
         "parentId": null,
-        "branchFlag": null,
+        "isTrueBranch": null,
         "branchIndex": null,
         "paramId": "17132",
         "operation": "*",
-        "standardMh": "84",
+        "standardMH": "84",
         "conditionType": "None",
-        "userComments": "Simple calculation example"
+        "moduleDesc": "Simple calculation example"
     }, {
         "id": 2,
         "parentId": null,
-        "branchFlag": null,
+        "isTrueBranch": null,
         "branchIndex": null,
         "paramId": "1000",
         "operation": "",
-        "standardMh": "",
+        "standardMH": "",
         "conditionType": "IF-ELSE",
         "leftType": "PARAM ID",
         "leftValue": "1000",
-        "ifCondition": "=",
+        "condition": "=",
         "rightType": "TEXT",
         "rightValue": "OT1.1",
-        "userComments": "IF-ELSE conditional example"
+        "moduleDesc": "IF-ELSE conditional example"
     }, {
         "id": 3,
         "parentId": 2,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 0,
         "paramId": "18910",
         "operation": "*",
-        "standardMh": "1.39",
+        "standardMH": "1.39",
         "conditionType": "None",
-        "userComments": "TRUE branch result"
+        "moduleDesc": "TRUE branch result"
     }, {
         "id": 4,
         "parentId": 2,
-        "branchFlag": false,
+        "isTrueBranch": false,
         "branchIndex": 0,
         "paramId": "18910",
         "operation": "*",
-        "standardMh": "1.05",
+        "standardMH": "1.05",
         "conditionType": "None",
-        "userComments": "FALSE branch result"
+        "moduleDesc": "FALSE branch result"
     }, {
         "id": 5,
         "parentId": null,
-        "branchFlag": null,
+        "isTrueBranch": null,
         "branchIndex": null,
         "paramId": "18920",
         "operation": "*",
-        "standardMh": "1",
+        "standardMH": "1",
         "conditionType": "LOOKUP",
-        "userComments": "LOOKUP with 3 params - LOOKUP(HP_SEP, SEPARATOR_COST, [15001])"
+        "moduleDesc": "LOOKUP with 3 params - LOOKUP(HP_SEP, SEPARATOR_COST, [15001])"
     }, {
         "id": 6,
         "parentId": 5,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 0,
         "paramId": "HP_SEP",
         "operation": "",
-        "standardMh": "",
+        "standardMH": "",
         "conditionType": "None",
-        "userComments": "Param 1: Table/Variable name"
+        "moduleDesc": "Param 1: Table/Variable name"
     }, {
         "id": 7,
         "parentId": 5,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 1,
         "paramId": "SEPARATOR_COST",
         "operation": "",
-        "standardMh": "",
+        "standardMH": "",
         "conditionType": "None",
-        "userComments": "Param 2: Column name"
+        "moduleDesc": "Param 2: Column name"
     }, {
         "id": 8,
         "parentId": 5,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 2,
         "paramId": "15001",
         "operation": "",
-        "standardMh": "",
+        "standardMH": "",
         "conditionType": "None",
-        "userComments": "Param 3: Lookup key"
+        "moduleDesc": "Param 3: Lookup key"
     }, {
         "id": 10,
         "parentId": null,
-        "branchFlag": null,
+        "isTrueBranch": null,
         "branchIndex": null,
         "paramId": "18921",
         "operation": "*",
-        "standardMh": "1",
+        "standardMH": "1",
         "conditionType": "LOOKUP",
-        "userComments": "LOOKUP with 5 params - LOOKUP([15080], PP_PPM_TUBE, [15006], {ml_code}, [15082])"
+        "moduleDesc": "LOOKUP with 5 params - LOOKUP([15080], PP_PPM_TUBE, [15006], {ml_code}, [15082])"
     }, {
         "id": 11,
         "parentId": 10,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 0,
         "paramId": "15080",
         "operation": "",
-        "standardMh": "",
+        "standardMH": "",
         "conditionType": "None",
-        "userComments": "Param 1"
+        "moduleDesc": "Param 1"
     }, {
         "id": 12,
         "parentId": 10,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 1,
         "paramId": "PP_PPM_TUBE",
         "operation": "",
-        "standardMh": "",
+        "standardMH": "",
         "conditionType": "None",
-        "userComments": "Param 2"
+        "moduleDesc": "Param 2"
     }, {
         "id": 13,
         "parentId": 10,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 2,
         "paramId": "15006",
         "operation": "",
-        "standardMh": "",
+        "standardMH": "",
         "conditionType": "None",
-        "userComments": "Param 3"
+        "moduleDesc": "Param 3"
     }, {
         "id": 14,
         "parentId": 10,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 3,
         "paramId": "{ml_code}",
         "operation": "",
-        "standardMh": "",
+        "standardMH": "",
         "conditionType": "None",
-        "userComments": "Param 4: Special format preserved"
+        "moduleDesc": "Param 4: Special format preserved"
     }, {
         "id": 15,
         "parentId": 10,
-        "branchFlag": true,
+        "isTrueBranch": true,
         "branchIndex": 4,
         "paramId": "15082",
         "operation": "",
-        "standardMh": "",
+        "standardMH": "",
         "conditionType": "None",
-        "userComments": "Param 5"
+        "moduleDesc": "Param 5"
     }];
 
     const customParamIdOptions = [{
@@ -237,10 +237,10 @@ function FeaturesV3Example() {
         flatData.forEach(row => {
             dataMap.set(row.id, {
                 ...row,
-                description: row.description || '',
+                paramDesc: row.paramDesc || '',
                 uom: row.uom || 'EA',
                 conditionType: row.conditionType || 'None',
-                userComments: row.userComments || '',
+                moduleDesc: row.moduleDesc || '',
                 isExpanded: row.isExpanded !== undefined ? row.isExpanded : (row.conditionType !== 'None'),
                 hasChildren: false,
                 children: {
@@ -257,9 +257,9 @@ function FeaturesV3Example() {
                     parent.hasChildren = true;
                     parent.isExpanded = true;
                     
-                    if (row.branchFlag === true) {
+                    if (row.isTrueBranch === true) {
                         parent.children.trueChildren.push(row);
-                    } else if (row.branchFlag === false) {
+                    } else if (row.isTrueBranch === false) {
                         parent.children.falseChildren.push(row);
                     }
                 }
@@ -312,7 +312,7 @@ function FeaturesV3Example() {
                 console.log(`  - paramId: ${rootRow.paramId}`);
                 console.log(`  - conditionType: ${rootRow.conditionType}`);
                 console.log(`  - hasChildren: ${rootRow.hasChildren}`);
-                console.log(`  - userComments: ${rootRow.userComments}`);
+                console.log(`  - moduleDesc: ${rootRow.moduleDesc}`);
                 console.log(`  - trueChildren: ${rootRow.children.trueChildren.length}`);
                 console.log(`  - falseChildren: ${rootRow.children.falseChildren.length}`);
             });
@@ -444,7 +444,7 @@ function FeaturesV3Example() {
                 <h3>📋 FeaturesV3 Sample Data - Dynamic LOOKUP Parameters</h3>
                 <p><strong>Test Scenarios:</strong></p>
                 <ul>
-                    <li><strong>Simple Calc (ID: 1):</strong> None ifCondition with basic calculation</li>
+                    <li><strong>Simple Calc (ID: 1):</strong> None condition with basic calculation</li>
                     <li><strong>IF-ELSE Logic (ID: 2):</strong> Conditional with TRUE/FALSE branches</li>
                     <li><strong>LOOKUP 3 Params (ID: 5):</strong> LOOKUP(HP_SEP, SEPARATOR_COST, [15001])</li>
                     <li><strong>LOOKUP 5 Params (ID: 10):</strong> LOOKUP([15080], PP_PPM_TUBE, [15006], {'{ml_code}'}, [15082])</li>
@@ -457,7 +457,7 @@ function FeaturesV3Example() {
                     <li>✅ Minimum 3 parameters enforced</li>
                     <li>✅ Use + button to add more parameters</li>
                 </ul>
-                <p><strong>Test Instructions:</strong> Try all ifCondition types: None, IF, IF-ELSE, and LOOKUP with different param counts!</p>
+                <p><strong>Test Instructions:</strong> Try all condition types: None, IF, IF-ELSE, and LOOKUP with different param counts!</p>
             </div>
 
             {/* The FeaturesV3 Component */}
@@ -492,13 +492,13 @@ function FeaturesV3Example() {
                 <h4>🆕 What's in FeaturesV3:</h4>
                 <ul>
                     <li>✅ All FeaturesV1 capabilities (None/IF/IF-ELSE with searchable dropdowns)</li>
-                    <li>✅ LOOKUP ifCondition with clean parent row (basic fields like None)</li>
+                    <li>✅ LOOKUP condition with clean parent row (basic fields like None)</li>
                     <li>✅ Dynamic LOOKUP parameters - supports 3, 4, 5, 6, 7, or more parameters</li>
                     <li>✅ Smart parameter formatting: [15001] for IDs, 'TEXT' for strings, VARIABLE for uppercase, {'{ml_code}'} preserved</li>
                     <li>✅ Minimum 3 parameters enforced for valid LOOKUP syntax</li>
                     <li>✅ Sequential ID system for clean database storage</li>
                     <li>✅ Deep copy state management preventing reference issues</li>
-                    <li>✅ Comprehensive validation for all ifCondition types</li>
+                    <li>✅ Comprehensive validation for all condition types</li>
                     <li>✅ Database transformation utilities included</li>
                 </ul>
             </div>

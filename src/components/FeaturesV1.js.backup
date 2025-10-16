@@ -65,21 +65,21 @@ function FeaturesV1({
         return {
             id: newId,
             parentId: null,
-            branchFlag: null,
+            isTrueBranch: null,
             branchIndex: null, // New field for multiple rows under same branch
             paramId: '',
-            description: '',
-            userComments: '',
+            paramDesc: '',
+            moduleDesc: '',
             uom: 'EA',
             operation: '*',
-            standardMh: '',
+            standardMH: '',
             conditionType: 'None', // Enhanced: Use dropdown instead of checkbox
             ifChecked: false, // Keep for backward compatibility
             isExpanded: false,
             hasChildren: false,
             leftType: 'PARAM ID',
             leftValue: '',
-            ifCondition: '==',
+            condition: '==',
             rightType: 'PARAM ID',
             rightValue: '',
             children: {
@@ -97,8 +97,8 @@ function FeaturesV1({
                 ...row,
                 // Enhanced: Migrate from ifChecked to conditionType
                 conditionType: row.conditionType || (row.ifChecked ? 'IF' : 'None'),
-                // Convert standardMh to string for consistency
-                standardMh: String(row.standardMh || ''),
+                // Convert standardMH to string for consistency
+                standardMH: String(row.standardMH || ''),
                 // Ensure UI-only fields are properly set
                 isExpanded: row.isExpanded !== undefined ? row.isExpanded : (row.ifChecked || false),
                 hasChildren: row.hasChildren !== undefined ? row.hasChildren : (row.ifChecked || false),
@@ -197,11 +197,11 @@ function FeaturesV1({
         }
         
         // Validate Comment
-        if (!row.userComments || row.userComments.trim() === '') {
-            errors[`${rowPath}.userComments`] = 'Comment is required';
+        if (!row.moduleDesc || row.moduleDesc.trim() === '') {
+            errors[`${rowPath}.moduleDesc`] = 'Comment is required';
         }
         
-        // Enhanced: Check ifCondition type instead of ifChecked
+        // Enhanced: Check condition type instead of ifChecked
         if (row.conditionType === 'None') {
             if (!row.uom || row.uom.trim() === '') {
                 errors[`${rowPath}.uom`] = 'UOM is required';
@@ -209,44 +209,44 @@ function FeaturesV1({
             if (!row.operation || row.operation.trim() === '') {
                 errors[`${rowPath}.operation`] = 'Operation is required';
             }
-            if (row.standardMh === null || row.standardMh === undefined || row.standardMh === '') {
-                errors[`${rowPath}.standardMh`] = 'Standard MH/UOM is required';
+            if (row.standardMH === null || row.standardMH === undefined || row.standardMH === '') {
+                errors[`${rowPath}.standardMH`] = 'Standard MH/UOM is required';
             } else {
                 // Enhanced validation based on operation type
                 const operation = row.operation;
                 if (operation === 'Number') {
                     // Validate mathematical characters
                     const mathRegex = /^[0-9+\-*/.()]+$/;
-                    if (!mathRegex.test(row.standardMh)) {
-                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
+                    if (!mathRegex.test(row.standardMH)) {
+                        errors[`${rowPath}.standardMH`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
                     }
                 } else if (operation === 'String') {
                     // Validate string characters (A-Z, a-z, _, -, single space)
                     const stringRegex = /^[A-Za-z_\- ]+$/;
-                    const hasMultipleSpaces = /\s{2,}/.test(row.standardMh);
-                    if (!stringRegex.test(row.standardMh)) {
-                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM must contain only letters, underscore, dash, and single spaces';
+                    const hasMultipleSpaces = /\s{2,}/.test(row.standardMH);
+                    if (!stringRegex.test(row.standardMH)) {
+                        errors[`${rowPath}.standardMH`] = 'Standard MH/UOM must contain only letters, underscore, dash, and single spaces';
                     } else if (hasMultipleSpaces) {
-                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM cannot contain multiple consecutive spaces';
+                        errors[`${rowPath}.standardMH`] = 'Standard MH/UOM cannot contain multiple consecutive spaces';
                     }
                 } else {
                     // For +, -, *, / operations - validate mathematical characters
                     const mathRegex = /^[0-9+\-*/.()]+$/;
-                    if (!mathRegex.test(row.standardMh)) {
-                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
+                    if (!mathRegex.test(row.standardMH)) {
+                        errors[`${rowPath}.standardMH`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
                     }
                 }
             }
         } else {
-            // If ifCondition type is IF or IF-ELSE, validate conditional fields
+            // If condition type is IF or IF-ELSE, validate conditional fields
             if (!row.leftType || row.leftType.trim() === '') {
                 errors[`${rowPath}.leftType`] = 'Left Type is required';
             }
             if (!row.leftValue || row.leftValue.trim() === '') {
                 errors[`${rowPath}.leftValue`] = 'Left Value is required';
             }
-            if (!row.ifCondition || row.ifCondition.trim() === '') {
-                errors[`${rowPath}.ifCondition`] = 'Condition is required';
+            if (!row.condition || row.condition.trim() === '') {
+                errors[`${rowPath}.condition`] = 'Condition is required';
             }
             if (!row.rightType || row.rightType.trim() === '') {
                 errors[`${rowPath}.rightType`] = 'Right Type is required';
@@ -255,7 +255,7 @@ function FeaturesV1({
                 errors[`${rowPath}.rightValue`] = 'Right Value is required';
             }
             
-            // Enhanced: Validate child rows based on ifCondition type
+            // Enhanced: Validate child rows based on condition type
             if (row.conditionType === 'IF' || row.conditionType === 'IF-ELSE') {
                 // Always validate TRUE branch for both IF and IF-ELSE
                 if (row.children.trueChildren && row.children.trueChildren.length > 0) {
@@ -264,7 +264,7 @@ function FeaturesV1({
                     });
                 }
                 
-                // Only validate FALSE branch for IF-ELSE ifCondition type
+                // Only validate FALSE branch for IF-ELSE condition type
                 if (row.conditionType === 'IF-ELSE' && row.children.falseChildren && row.children.falseChildren.length > 0) {
                     row.children.falseChildren.forEach((child, index) => {
                         validateRow(child, errors, `${rowPath}.false.${index}`);
@@ -297,7 +297,7 @@ function FeaturesV1({
 
     // Helper function to build the complete validation path for any row (handles unlimited nesting)
     const buildValidationPath = (row, allRows) => {
-        if (!row.parentId || row.branchFlag === null) {
+        if (!row.parentId || row.isTrueBranch === null) {
             // This is a main row
             return row.id;
         }
@@ -309,7 +309,7 @@ function FeaturesV1({
         }
         
         const parentPath = buildValidationPath(parent, allRows);
-        const branchType = row.branchFlag ? 'true' : 'false';
+        const branchType = row.isTrueBranch ? 'true' : 'false';
         const branchIndex = row.branchIndex !== null ? row.branchIndex : 0;
         return `${parentPath}.${branchType}.${branchIndex}`;
     };
@@ -347,17 +347,17 @@ function FeaturesV1({
     };
 
     // Create new row structure - Updated for new format
-    const createNewRow = (id, parentId = null, branchFlag = null, branchIndex = null) => ({
+    const createNewRow = (id, parentId = null, isTrueBranch = null, branchIndex = null) => ({
         id,
         parentId,
-        branchFlag,
+        isTrueBranch,
         branchIndex,
         paramId: '',
-        description: '',
-        userComments: '',
+        paramDesc: '',
+        moduleDesc: '',
         uom: 'EA',
         operation: '*',
-        standardMh: '',
+        standardMH: '',
         conditionType: 'None', // Enhanced: Use dropdown instead of checkbox
         ifChecked: false, // Keep for backward compatibility
         isExpanded: false,
@@ -366,7 +366,7 @@ function FeaturesV1({
         // Conditional fields
         leftType: 'PARAM ID',
         leftValue: '',
-        ifCondition: '==',
+        condition: '==',
         rightType: 'PARAM ID',
         rightValue: '',
         
@@ -408,7 +408,7 @@ function FeaturesV1({
                         console.log(`🔍 Debug - Target row ${rowId} references:`, {
                             targetRow: targetRow,
                             parentId: targetRow.parentId,
-                            branchFlag: targetRow.branchFlag,
+                            isTrueBranch: targetRow.isTrueBranch,
                             trueChildrenCount: trueChildren.length,
                             falseChildrenCount: falseChildren.length
                         });
@@ -441,7 +441,7 @@ function FeaturesV1({
                 console.log(`   Field: ${field}`);
                 console.log(`   Old Value: ${row[field]}`);
                 console.log(`   New Value: ${value}`);
-                console.log(`   Row Branch: ${row.branchFlag ? 'TRUE' : 'FALSE'}`);
+                console.log(`   Row Branch: ${row.isTrueBranch ? 'TRUE' : 'FALSE'}`);
                 console.log(`   Row Object Reference:`, row);
                 
                 // Make the field update
@@ -451,8 +451,8 @@ function FeaturesV1({
                 if (field === 'paramId') {
                     const selectedParam = finalParamOptions.find(opt => opt.value === value);
                     if (selectedParam) {
-                        row.description = selectedParam.description || '';
-                        console.log(`   ↳ Updated description: ${row.description}`);
+                        row.paramDesc = selectedParam.description || '';
+                        console.log(`   ↳ Updated paramDesc: ${row.paramDesc}`);
                     }
                 }
                 
@@ -521,7 +521,7 @@ function FeaturesV1({
                 
                 if (hasCondition && row.children.trueChildren.length === 0 && row.children.falseChildren.length === 0) {
                     // CRITICAL FIX: Use synchronous ID generation to prevent duplicate IDs
-                    console.log(`🔧 Creating children for parent ${rowId}, ifCondition type: ${conditionType}`);
+                    console.log(`🔧 Creating children for parent ${rowId}, condition type: ${conditionType}`);
                     
                     if (conditionType === 'IF-ELSE') {
                         // Generate both IDs at once to ensure they're unique
@@ -544,19 +544,19 @@ function FeaturesV1({
                             console.log(`✅ VERIFIED: TRUE child ${trueChild.id} and FALSE child ${falseChild.id} have unique IDs`);
                         }
                     } else if (conditionType === 'IF') {
-                        // Only TRUE child for IF ifCondition
+                        // Only TRUE child for IF condition
                         const trueChildId = generateNextId();
                         const trueChild = createNewRow(trueChildId, rowId, true, 0);
                         row.children.trueChildren = [trueChild];
                         row.children.falseChildren = [];
                         
-                        console.log(`✅ Created TRUE child ID: ${trueChildId} for IF ifCondition`);
+                        console.log(`✅ Created TRUE child ID: ${trueChildId} for IF condition`);
                     }
                     
                     row.isExpanded = true;
                 } else if (hasCondition) {
                     // Handle switching between IF and IF-ELSE with guaranteed unique IDs
-                    console.log(`🔄 Switching ifCondition type to: ${conditionType} for parent ${rowId}`);
+                    console.log(`🔄 Switching condition type to: ${conditionType} for parent ${rowId}`);
                     
                     if (conditionType === 'IF') {
                         // Clear FALSE children when switching to IF-only
@@ -566,7 +566,7 @@ function FeaturesV1({
                             const trueChildId = generateNextId();
                             const trueChild = createNewRow(trueChildId, rowId, true, 0);
                             row.children.trueChildren = [trueChild];
-                            console.log(`✅ Added TRUE child ID: ${trueChildId} for IF ifCondition`);
+                            console.log(`✅ Added TRUE child ID: ${trueChildId} for IF condition`);
                         }
                     } else if (conditionType === 'IF-ELSE') {
                         // Determine how many new children we need
@@ -649,23 +649,23 @@ function FeaturesV1({
     };
 
     // NEW FEATURE: Add multiple rows under TRUE/FALSE branches with deep copy
-    const addChildRow = (parentRowId, branchFlag) => {
+    const addChildRow = (parentRowId, isTrueBranch) => {
         setRows(prevRows => {
             const newRows = JSON.parse(JSON.stringify(prevRows));
-            addChildRowRecursive(newRows, parentRowId, branchFlag);
+            addChildRowRecursive(newRows, parentRowId, isTrueBranch);
             if (onDataChange) onDataChange(newRows);
             return newRows;
         });
     };
 
-    const addChildRowRecursive = (rowsList, parentRowId, branchFlag) => {
+    const addChildRowRecursive = (rowsList, parentRowId, isTrueBranch) => {
         for (let row of rowsList) {
             if (row.id === parentRowId) {
-                const targetArray = branchFlag ? row.children.trueChildren : row.children.falseChildren;
+                const targetArray = isTrueBranch ? row.children.trueChildren : row.children.falseChildren;
                 const newIndex = targetArray.length;
                 const newRowId = generateNextId(); // Use sequential ID for simplicity
                 
-                const newChildRow = createNewRow(newRowId, parentRowId, branchFlag, newIndex);
+                const newChildRow = createNewRow(newRowId, parentRowId, isTrueBranch, newIndex);
                 targetArray.push(newChildRow);
                 
                 row.hasChildren = true;
@@ -673,10 +673,10 @@ function FeaturesV1({
                 return true;
             }
             
-            if (row.children.trueChildren && addChildRowRecursive(row.children.trueChildren, parentRowId, branchFlag)) {
+            if (row.children.trueChildren && addChildRowRecursive(row.children.trueChildren, parentRowId, isTrueBranch)) {
                 return true;
             }
-            if (row.children.falseChildren && addChildRowRecursive(row.children.falseChildren, parentRowId, branchFlag)) {
+            if (row.children.falseChildren && addChildRowRecursive(row.children.falseChildren, parentRowId, isTrueBranch)) {
                 return true;
             }
         }
@@ -684,19 +684,19 @@ function FeaturesV1({
     };
 
     // NEW FEATURE: Remove child row from TRUE/FALSE branches with deep copy
-    const removeChildRow = (parentRowId, branchFlag, childIndex) => {
+    const removeChildRow = (parentRowId, isTrueBranch, childIndex) => {
         setRows(prevRows => {
             const newRows = JSON.parse(JSON.stringify(prevRows));
-            removeChildRowRecursive(newRows, parentRowId, branchFlag, childIndex);
+            removeChildRowRecursive(newRows, parentRowId, isTrueBranch, childIndex);
             if (onDataChange) onDataChange(newRows);
             return newRows;
         });
     };
 
-    const removeChildRowRecursive = (rowsList, parentRowId, branchFlag, childIndex) => {
+    const removeChildRowRecursive = (rowsList, parentRowId, isTrueBranch, childIndex) => {
         for (let row of rowsList) {
             if (row.id === parentRowId) {
-                const targetArray = branchFlag ? row.children.trueChildren : row.children.falseChildren;
+                const targetArray = isTrueBranch ? row.children.trueChildren : row.children.falseChildren;
                 
                 if (childIndex >= 0 && childIndex < targetArray.length) {
                     targetArray.splice(childIndex, 1);
@@ -713,10 +713,10 @@ function FeaturesV1({
                 return true;
             }
             
-            if (row.children.trueChildren && removeChildRowRecursive(row.children.trueChildren, parentRowId, branchFlag, childIndex)) {
+            if (row.children.trueChildren && removeChildRowRecursive(row.children.trueChildren, parentRowId, isTrueBranch, childIndex)) {
                 return true;
             }
-            if (row.children.falseChildren && removeChildRowRecursive(row.children.falseChildren, parentRowId, branchFlag, childIndex)) {
+            if (row.children.falseChildren && removeChildRowRecursive(row.children.falseChildren, parentRowId, isTrueBranch, childIndex)) {
                 return true;
             }
         }
@@ -728,22 +728,22 @@ function FeaturesV1({
         if (row.conditionType === 'None') {
             const paramDisplay = row.paramId ? `[${row.paramId}]` : '[PARAM]';
             // Convert to string and handle both string and number types
-            const standardMh = String(row.standardMh || '');
+            const standardMH = String(row.standardMH || '');
             const operation = row.operation || '*';
             
             // Special handling for Number and String operations
             if (operation === 'Number' || operation === 'String') {
                 // For Number and String operations, show only Standard MH/UOM value
-                if (!standardMh || standardMh.trim() === '') {
+                if (!standardMH || standardMH.trim() === '') {
                     return operation === 'Number' ? '0' : 'EMPTY_STRING';
                 }
-                return standardMh;
+                return standardMH;
             } else {
                 // For math operations (+, -, *, /), show full format
-                if (!standardMh || standardMh.trim() === '' || standardMh === '0') {
+                if (!standardMH || standardMH.trim() === '' || standardMH === '0') {
                     return paramDisplay;
                 }
-                return `${paramDisplay} ${operation} ${standardMh}`;
+                return `${paramDisplay} ${operation} ${standardMH}`;
             }
         } else {
             // Helper function to format values based on type
@@ -762,7 +762,7 @@ function FeaturesV1({
             };
 
             const leftVal = formatValueForFormula(row.leftValue, row.leftType);
-            const ifCondition = row.ifCondition || '=';
+            const condition = row.condition || '=';
             const rightVal = formatValueForFormula(row.rightValue, row.rightType);
             
             // Handle multiple children in TRUE and FALSE branches
@@ -776,14 +776,14 @@ function FeaturesV1({
             
             const trueFormula = generateChildrenFormula(row.children.trueChildren);
             
-            // Enhanced: Generate different formulas based on ifCondition type
+            // Enhanced: Generate different formulas based on condition type
             if (row.conditionType === 'IF') {
                 // IF only - no FALSE part
-                return `IF(${leftVal} ${ifCondition} ${rightVal}, ${trueFormula})`;
+                return `IF(${leftVal} ${condition} ${rightVal}, ${trueFormula})`;
             } else if (row.conditionType === 'IF-ELSE') {
                 // IF-ELSE - both TRUE and FALSE parts
                 const falseFormula = generateChildrenFormula(row.children.falseChildren);
-                return `IF(${leftVal} ${ifCondition} ${rightVal}, ${trueFormula}, ${falseFormula})`;
+                return `IF(${leftVal} ${condition} ${rightVal}, ${trueFormula}, ${falseFormula})`;
             }
         }
     };
@@ -976,7 +976,7 @@ function FeaturesV1({
                     if (!relationships[key]) {
                         relationships[key] = { true: [], false: [] };
                     }
-                    relationships[key][row.branchFlag ? 'true' : 'false'].push({
+                    relationships[key][row.isTrueBranch ? 'true' : 'false'].push({
                         id: row.id,
                         paramId: row.paramId,
                         branchIndex: row.branchIndex
@@ -993,8 +993,8 @@ function FeaturesV1({
             console.log(`📊 Total Rows to Insert: ${dbData.length}`);
             console.log(`🌱 Root Rows: ${dbData.filter(r => !r.parentId).length}`);
             console.log(`👶 Child Rows: ${dbData.filter(r => r.parentId).length}`);
-            console.log(`✅ TRUE Branch Children: ${dbData.filter(r => r.branchFlag === true).length}`);
-            console.log(`❌ FALSE Branch Children: ${dbData.filter(r => r.branchFlag === false).length}`);
+            console.log(`✅ TRUE Branch Children: ${dbData.filter(r => r.isTrueBranch === true).length}`);
+            console.log(`❌ FALSE Branch Children: ${dbData.filter(r => r.isTrueBranch === false).length}`);
             
             // Show SQL-ready format with enhanced parent-child visualization
             console.log('🗄️ === SQL INSERT READY FORMAT ===');
@@ -1005,23 +1005,23 @@ function FeaturesV1({
             
             console.log('📋 ROOT ROWS (Parents):');
             parentRows.forEach((row, index) => {
-                console.log(`  ${index + 1}. ID: ${row.id} | ParamID: [${row.paramId}] | Operation: ${row.operation} | Standard MH: ${row.standardMh}`);
+                console.log(`  ${index + 1}. ID: ${row.id} | ParamID: [${row.paramId}] | Operation: ${row.operation} | Standard MH: ${row.standardMH}`);
                 
                 // Find children for this parent
-                const trueChildren = childRows.filter(c => c.parentId === row.id && c.branchFlag === true);
-                const falseChildren = childRows.filter(c => c.parentId === row.id && c.branchFlag === false);
+                const trueChildren = childRows.filter(c => c.parentId === row.id && c.isTrueBranch === true);
+                const falseChildren = childRows.filter(c => c.parentId === row.id && c.isTrueBranch === false);
                 
                 if (trueChildren.length > 0) {
                     console.log(`    ✅ TRUE Branch (${trueChildren.length} children):`);
                     trueChildren.forEach((child, idx) => {
-                        console.log(`      ${idx + 1}. ID: ${child.id} | ParamID: [${child.paramId}] | Operation: ${child.operation} | Standard MH: ${child.standardMh}`);
+                        console.log(`      ${idx + 1}. ID: ${child.id} | ParamID: [${child.paramId}] | Operation: ${child.operation} | Standard MH: ${child.standardMH}`);
                     });
                 }
                 
                 if (falseChildren.length > 0) {
                     console.log(`    ❌ FALSE Branch (${falseChildren.length} children):`);
                     falseChildren.forEach((child, idx) => {
-                        console.log(`      ${idx + 1}. ID: ${child.id} | ParamID: [${child.paramId}] | Operation: ${child.operation} | Standard MH: ${child.standardMh}`);
+                        console.log(`      ${idx + 1}. ID: ${child.id} | ParamID: [${child.paramId}] | Operation: ${child.operation} | Standard MH: ${child.standardMH}`);
                     });
                 }
                 
@@ -1033,18 +1033,18 @@ function FeaturesV1({
             
             console.log('📊 DETAILED SQL INSERT DATA:');
             dbData.forEach((row, index) => {
-                const rowType = row.parentId ? `Child of ${row.parentId} (${row.branchFlag ? 'TRUE' : 'FALSE'})` : 'Root Row';
+                const rowType = row.parentId ? `Child of ${row.parentId} (${row.isTrueBranch ? 'TRUE' : 'FALSE'})` : 'Root Row';
                 console.log(`Row ${index + 1} [${rowType}]:`, {
                     id: row.id,
                     parentId: row.parentId,
-                    branchFlag: row.branchFlag,
+                    isTrueBranch: row.isTrueBranch,
                     branchIndex: row.branchIndex,
                     paramId: row.paramId,
                     operation: row.operation,
-                    standardMh: row.standardMh,
-                    // Only show IF ifCondition fields if they exist
+                    standardMH: row.standardMH,
+                    // Only show IF condition fields if they exist
                     ...(row.leftType && { leftType: row.leftType, leftValue: row.leftValue }),
-                    ...(row.ifCondition && { ifCondition: row.ifCondition }),
+                    ...(row.condition && { condition: row.condition }),
                     ...(row.rightType && { rightType: row.rightType, rightValue: row.rightValue })
                 });
             });
@@ -1064,10 +1064,10 @@ function FeaturesV1({
     };
 
     // NEW FEATURE: Render children section with add/remove buttons
-    const renderChildrenSection = (row, branchFlag) => {
-        const children = branchFlag ? row.children.trueChildren : row.children.falseChildren;
-        const branchName = branchFlag ? 'TRUE' : 'FALSE';
-        const branchColor = branchFlag ? '#4caf50' : '#f44336';
+    const renderChildrenSection = (row, isTrueBranch) => {
+        const children = isTrueBranch ? row.children.trueChildren : row.children.falseChildren;
+        const branchName = isTrueBranch ? 'TRUE' : 'FALSE';
+        const branchColor = isTrueBranch ? '#4caf50' : '#f44336';
         
         return (
             <div style={{ marginLeft: '40px', marginTop: '10px' }}>
@@ -1076,7 +1076,7 @@ function FeaturesV1({
                     alignItems: 'center', 
                     marginBottom: '10px',
                     padding: '8px',
-                    backgroundColor: branchFlag ? '#e8f5e8' : '#ffebee',
+                    backgroundColor: isTrueBranch ? '#e8f5e8' : '#ffebee',
                     borderLeft: `4px solid ${branchColor}`,
                     borderRadius: '4px'
                 }}>
@@ -1086,7 +1086,7 @@ function FeaturesV1({
                     <Tooltip title={`Add new row to ${branchName} branch`}>
                         <IconButton
                             size="small"
-                            onClick={() => addChildRow(row.id, branchFlag)}
+                            onClick={() => addChildRow(row.id, isTrueBranch)}
                             style={{ color: branchColor }}
                         >
                             <AddIcon />
@@ -1104,7 +1104,7 @@ function FeaturesV1({
                                 <Tooltip title={`Remove this row from ${branchName} branch`}>
                                     <IconButton
                                         size="small"
-                                        onClick={() => removeChildRow(row.id, branchFlag, index)}
+                                        onClick={() => removeChildRow(row.id, isTrueBranch, index)}
                                         style={{ color: '#f44336', marginRight: '10px' }}
                                     >
                                         <RemoveIcon />
@@ -1154,8 +1154,8 @@ function FeaturesV1({
 
                 {/* TRUE/FALSE Indicator for child rows */}
                 {isChild && (
-                    <div className={`col-block col-ifCondition ${row.branchFlag ? 'true' : 'false'} w40`}>
-                        {row.branchFlag ? <DoneIcon /> : <ClearIcon />}
+                    <div className={`col-block col-condition ${row.isTrueBranch ? 'true' : 'false'} w40`}>
+                        {row.isTrueBranch ? <DoneIcon /> : <ClearIcon />}
                         {childIndex !== null && (
                             <Typography variant="caption" style={{ marginLeft: '4px' }}>
                                 {childIndex + 1}
@@ -1204,7 +1204,7 @@ function FeaturesV1({
                 <div className='col-block w200'>
                     <TextField
                         label="Param Description"
-                        value={row.description}
+                        value={row.paramDesc}
                         variant="outlined"
                         size="small"
                         disabled
@@ -1276,7 +1276,7 @@ function FeaturesV1({
                     <TextField
                         label="Standard MH/UOM"
                         type="text"
-                        value={String(row.standardMh || '')}
+                        value={String(row.standardMH || '')}
                         onChange={(e) => {
                             const value = e.target.value;
                             const operation = row.operation;
@@ -1286,7 +1286,7 @@ function FeaturesV1({
                                 // Only allow numbers, +, -, *, /, ., (, )
                                 const mathRegex = /^[0-9+\-*/.()]*$/;
                                 if (mathRegex.test(value)) {
-                                    updateRow(row.id, 'standardMh', value);
+                                    updateRow(row.id, 'standardMH', value);
                                 }
                             } else if (operation === 'String') {
                                 // Allow A-Z, a-z, _, -, and single space
@@ -1294,20 +1294,20 @@ function FeaturesV1({
                                 // Check for single space (no multiple consecutive spaces)
                                 const hasMultipleSpaces = /\s{2,}/.test(value);
                                 if (stringRegex.test(value) && !hasMultipleSpaces) {
-                                    updateRow(row.id, 'standardMh', value);
+                                    updateRow(row.id, 'standardMH', value);
                                 }
                             } else {
                                 // For +, -, *, / operations - math validation
                                 const mathRegex = /^[0-9+\-*/.()]*$/;
                                 if (mathRegex.test(value)) {
-                                    updateRow(row.id, 'standardMh', value);
+                                    updateRow(row.id, 'standardMH', value);
                                 }
                             }
                         }}
                         variant="outlined"
                         size="small"
                         disabled={row.conditionType !== 'None'}
-                        error={hasFieldError(row, 'standardMh')}
+                        error={hasFieldError(row, 'standardMH')}
                         placeholder={
                             row.operation === 'Number' ? "e.g. 10, (2+3)*4, 15.5" :
                             row.operation === 'String' ? "e.g. Product_Name, Test-Case" :
@@ -1371,14 +1371,14 @@ function FeaturesV1({
                             <FormControl 
                                 variant="outlined" 
                                 size="small"
-                                error={hasFieldError(row, 'ifCondition')}
+                                error={hasFieldError(row, 'condition')}
                             >
-                                <InputLabel error={hasFieldError(row, 'ifCondition')}>Condition</InputLabel>
+                                <InputLabel error={hasFieldError(row, 'condition')}>Condition</InputLabel>
                                 <Select
-                                    value={row.ifCondition}
-                                    onChange={(e) => updateRow(row.id, 'ifCondition', e.target.value)}
+                                    value={row.condition}
+                                    onChange={(e) => updateRow(row.id, 'condition', e.target.value)}
                                     label="Condition"
-                                    error={hasFieldError(row, 'ifCondition')}
+                                    error={hasFieldError(row, 'condition')}
                                 >
                                     {conditionOptions.map(cond => (
                                         <MenuItem key={cond} value={cond}>{cond}</MenuItem>
@@ -1424,11 +1424,11 @@ function FeaturesV1({
                 <div className='col-block w200'>
                     <TextField
                         label="Comment"
-                        value={row.userComments}
-                        onChange={(e) => updateRow(row.id, 'userComments', e.target.value)}
+                        value={row.moduleDesc}
+                        onChange={(e) => updateRow(row.id, 'moduleDesc', e.target.value)}
                         variant="outlined"
                         size="small"
-                        error={hasFieldError(row, 'userComments')}
+                        error={hasFieldError(row, 'moduleDesc')}
                     />
                 </div>
 
@@ -1504,7 +1504,7 @@ function FeaturesV1({
                         borderRadius: '4px',
                         border: '1px solid #2196f3'
                     }}>
-                        ✨ <strong>Enhanced Features:</strong> Choose ifCondition type from dropdown (None/IF/IF-ELSE)! 
+                        ✨ <strong>Enhanced Features:</strong> Choose condition type from dropdown (None/IF/IF-ELSE)! 
                         Click the <AddIcon style={{ fontSize: '16px', verticalAlign: 'middle' }} /> button in each branch section to add more rows.
                     </Typography>
                 </Box>
