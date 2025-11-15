@@ -227,7 +227,7 @@ function FeaturesV3({
         const isIfElseChild = parentCondition === 'IF' || parentCondition === 'IF-ELSE';
         
         // ===== VALIDATION FOR REGULAR ROWS =====
-        // Validate Param ID (NOT required for LOOKUP parent, IF, or IF-ELSE - they don't use param fields)
+        // Validate Param ID (NOT required for LOOKUP parent, IF, IF-ELSE, or Value - they don't use param fields)
         const needsParamId = row.conditionType === 'None' || row.conditionType === null || row.conditionType === undefined;
         if (needsParamId) {
             if (!row.paramId || row.paramId.trim() === '') {
@@ -249,19 +249,22 @@ function FeaturesV3({
             if (row.standardMh !== null && row.standardMh !== undefined && row.standardMh !== '') {
                 const operation = row.operation;
                 if (operation === 'Number') {
+                    // Allow numeric, +, -, *, /, dot, and parentheses
                     const mathRegex = /^[0-9+\-*/.()]+$/;
                     if (!mathRegex.test(row.standardMh)) {
                         errors[`${rowPath}.standardMh`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
                     }
                 } else if (operation === 'String') {
-                    const stringRegex = /^[A-Za-z_\- ]+$/;
+                    // Allow letters, numbers, underscore, dash, space, dot, and comma
+                    const stringRegex = /^[A-Za-z0-9_\-,. ]+$/;
                     const hasMultipleSpaces = /\s{2,}/.test(row.standardMh);
                     if (!stringRegex.test(row.standardMh)) {
-                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM must contain only letters, underscore, dash, and single spaces';
+                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM must contain only letters, numbers, underscore, dash, dot, comma, and single spaces';
                     } else if (hasMultipleSpaces) {
                         errors[`${rowPath}.standardMh`] = 'Standard MH/UOM cannot contain multiple consecutive spaces';
                     }
                 } else {
+                    // For +, -, *, / operations - allow parentheses as well
                     const mathRegex = /^[0-9+\-*/.()]+$/;
                     if (!mathRegex.test(row.standardMh)) {
                         errors[`${rowPath}.standardMh`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
@@ -273,6 +276,39 @@ function FeaturesV3({
             // No need to validate operation/standardMh as they're not used
             if (!row.children?.trueChildren || row.children.trueChildren.length < 3) {
                 errors[`${rowPath}.children`] = 'LOOKUP requires at least 3 parameters';
+            }
+        } else if (row.conditionType === 'Value') {
+            // Value: Validate operation and standardMh (BOTH REQUIRED for Value type)
+            if (!row.operation || row.operation.trim() === '') {
+                errors[`${rowPath}.operation`] = 'Operation is required';
+            }
+            // Validate operation is String or Number
+            if (row.operation && row.operation !== 'String' && row.operation !== 'Number') {
+                errors[`${rowPath}.operation`] = 'Operation must be String or Number for Value type';
+            }
+            
+            // Standard MH is REQUIRED for Value type
+            if (!row.standardMh || (typeof row.standardMh === 'string' && row.standardMh.trim() === '')) {
+                errors[`${rowPath}.standardMh`] = 'Standard MH/UOM is required for Value type';
+            } else {
+                // Validate format based on operation
+                const operation = row.operation;
+                if (operation === 'Number') {
+                    // Allow numeric, +, -, *, /, dot, and parentheses
+                    const mathRegex = /^[0-9+\-*/.()]+$/;
+                    if (!mathRegex.test(row.standardMh)) {
+                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM must contain only numbers and math operators (+, -, *, /, ., (, ))';
+                    }
+                } else if (operation === 'String') {
+                    // Allow letters, numbers, underscore, dash, space, dot, and comma
+                    const stringRegex = /^[A-Za-z0-9_\-,. ]+$/;
+                    const hasMultipleSpaces = /\s{2,}/.test(row.standardMh);
+                    if (!stringRegex.test(row.standardMh)) {
+                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM must contain only letters, numbers, underscore, dash, dot, comma, and single spaces';
+                    } else if (hasMultipleSpaces) {
+                        errors[`${rowPath}.standardMh`] = 'Standard MH/UOM cannot contain multiple consecutive spaces';
+                    }
+                }
             }
         } else if (row.conditionType === 'IF' || row.conditionType === 'IF-ELSE') {
             // Validate conditional fields (required for IF/IF-ELSE)
@@ -501,6 +537,11 @@ function FeaturesV3({
         for (let row of rowsList) {
             if (row.id === rowId) {
                 row.conditionType = conditionType;
+                
+                // Reset operation and standardMh when condition type changes
+                row.operation = '';
+                row.standardMh = '';
+                
                 const hasChildren = conditionType === 'IF' || conditionType === 'IF-ELSE' || conditionType === 'LOOKUP';
                 
                 row.ifChecked = hasChildren;
@@ -730,13 +771,24 @@ function FeaturesV3({
                 if (!standardMh || standardMh.trim() === '') {
                     return operation === 'Number' ? '0' : 'EMPTY_STRING';
                 }
-                return standardMh;
+                // Wrap String values with single quotes
+                return operation === 'String' ? `'${standardMh}'` : standardMh;
             } else {
                 if (!standardMh || standardMh.trim() === '' || standardMh === '0') {
                     return paramDisplay;
                 }
                 return `${paramDisplay} ${operation} ${standardMh}`;
             }
+        } else if (row.conditionType === 'Value') {
+            // Value type: Only show the standardMh value (no paramId)
+            const standardMh = String(row.standardMh || '');
+            const operation = row.operation || 'Number';
+            
+            if (!standardMh || standardMh.trim() === '') {
+                return operation === 'Number' ? '0' : 'EMPTY_STRING';
+            }
+            // Wrap String values with single quotes
+            return operation === 'String' ? `'${standardMh}'` : standardMh;
         } else if (row.conditionType === 'LOOKUP') {
             // ===== ENHANCED LOOKUP FORMULA GENERATION - Typed Parameters =====
             const children = row.children?.trueChildren || [];
@@ -1270,6 +1322,7 @@ function FeaturesV3({
                                 error={hasFieldError(row, 'conditionType')}
                             >
                                 <MenuItem value="None">None</MenuItem>
+                                <MenuItem value="Value">Value</MenuItem>
                                 <MenuItem value="IF">IF</MenuItem>
                                 <MenuItem value="IF-ELSE">IF-ELSE</MenuItem>
                                 <MenuItem value="LOOKUP">LOOKUP</MenuItem>
@@ -1350,15 +1403,15 @@ function FeaturesV3({
                                     label="String Value"
                                     value={row.lookupParamValue || ''}
                                     onChange={(e) => {
-                                        // Allow A-Z, a-z, 0-9, underscore
+                                        // Allow letters, numbers, underscore, dash, dot, comma, and space
                                         const value = e.target.value;
-                                        if (/^[A-Za-z0-9_]*$/.test(value)) {
+                                        if (/^[A-Za-z0-9_\-,. ]*$/.test(value)) {
                                             updateRow(row.id, 'lookupParamValue', value);
                                         }
                                     }}
                                     variant="outlined"
                                     size="small"
-                                    placeholder="e.g., HRSG_FIXED_MATL_COST"
+                                    placeholder="e.g., Product_Name, 123, Test-1.5"
                                     fullWidth
                                 />
                             </div>
@@ -1462,8 +1515,8 @@ function FeaturesV3({
                     </>
                 ) : (
                     // ===== STANDARD ROWS (Non-LOOKUP children) =====
-                    // Hide Param ID and Description for IF/IF-ELSE/LOOKUP rows
-                    row.conditionType !== 'IF' && row.conditionType !== 'IF-ELSE' && row.conditionType !== 'LOOKUP' && (
+                    // Hide Param ID and Description for IF/IF-ELSE/LOOKUP/Value rows
+                    row.conditionType !== 'IF' && row.conditionType !== 'IF-ELSE' && row.conditionType !== 'LOOKUP' && row.conditionType !== 'Value' && (
                         <>
                             {/* Param ID - Searchable */}
                             <div className='col-block'>
@@ -1515,11 +1568,12 @@ function FeaturesV3({
                     )
                 )}
 
-                {/* UOM - Hidden for LOOKUP children, IF, IF-ELSE, and LOOKUP parent */}
+                {/* UOM - Hidden for LOOKUP children, IF, IF-ELSE, LOOKUP parent, and Value */}
                 {parentConditionType !== 'LOOKUP' && 
                  row.conditionType !== 'IF' && 
                  row.conditionType !== 'IF-ELSE' && 
-                 row.conditionType !== 'LOOKUP' && (
+                 row.conditionType !== 'LOOKUP' && 
+                 row.conditionType !== 'Value' && (
                     <div className='col-block'>
                         <Autocomplete
                             value={finalUomOptions.find(option => option.value === row.uom) || null}
@@ -1547,6 +1601,7 @@ function FeaturesV3({
                 )}
 
                 {/* Operation - Hidden for LOOKUP children, IF, IF-ELSE, and LOOKUP parent */}
+                {/* For "Value" condition type, show only String and Number */}
                 {parentConditionType !== 'LOOKUP' && 
                  row.conditionType !== 'IF' && 
                  row.conditionType !== 'IF-ELSE' && 
@@ -1556,8 +1611,10 @@ function FeaturesV3({
                         value={operationOptions.find(op => op === row.operation) || null}
                         onChange={(event, newValue) => {
                             updateRow(row.id, 'operation', newValue || '');
+                            // Reset Standard MH field when operation changes
+                            updateRow(row.id, 'standardMh', '');
                         }}
-                        options={operationOptions}
+                        options={row.conditionType === 'Value' ? ['String', 'Number'] : operationOptions}
                         getOptionLabel={(option) => option}
                         size="small"
                         renderInput={(params) => (
@@ -1598,17 +1655,20 @@ function FeaturesV3({
                             const operation = row.operation;
                             
                             if (operation === 'Number') {
+                                // Allow numeric, +, -, *, /, dot, and parentheses
                                 const mathRegex = /^[0-9+\-*/.()]*$/;
                                 if (mathRegex.test(value)) {
                                     updateRow(row.id, 'standardMh', value);
                                 }
                             } else if (operation === 'String') {
-                                const stringRegex = /^[A-Za-z_\- ]*$/;
+                                // Allow letters, numbers, underscore, dash, space, dot, and comma
+                                const stringRegex = /^[A-Za-z0-9_\-,. ]*$/;
                                 const hasMultipleSpaces = /\s{2,}/.test(value);
                                 if (stringRegex.test(value) && !hasMultipleSpaces) {
                                     updateRow(row.id, 'standardMh', value);
                                 }
                             } else {
+                                // For +, -, *, / operations - allow parentheses
                                 const mathRegex = /^[0-9+\-*/.()]*$/;
                                 if (mathRegex.test(value)) {
                                     updateRow(row.id, 'standardMh', value);
@@ -1620,7 +1680,7 @@ function FeaturesV3({
                         error={hasFieldError(row, 'standardMh')}
                         placeholder={
                             row.operation === 'Number' ? "e.g. 10, (2+3)*4, 15.5" :
-                            row.operation === 'String' ? "e.g. Product_Name, Test-Case" :
+                            row.operation === 'String' ? "e.g. Product_Name, 123, Test-1.5, Value,Item" :
                             "e.g. 10, (2+3)*4, 15.5"
                         }
                     />

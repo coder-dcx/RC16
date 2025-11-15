@@ -183,6 +183,9 @@ export const componentRowToDbRow = (componentRow, parentRow = null) => {
     // Determine if this is an IF or IF-ELSE row
     const isIfElseRow = componentRow.conditionType === 'IF' || componentRow.conditionType === 'IF-ELSE';
     
+    // Determine if this is a Value row
+    const isValueRow = componentRow.conditionType === 'Value';
+    
     // IF/IF-ELSE ROW: Has IF fields but NOT param fields
     if (isIfElseRow) {
         return {
@@ -201,6 +204,32 @@ export const componentRowToDbRow = (componentRow, parentRow = null) => {
             ifCondition: componentRow.ifCondition,
             rightType: componentRow.rightType,
             rightValue: componentRow.rightValue,
+            // LOOKUP fields not used
+            lookupParamType: null,
+            lookupParamValue: null,
+            lookupParamDesc: null
+        };
+    }
+    
+    // VALUE ROW: Has operation and standardMh but NOT paramId/uom/IF fields
+    if (isValueRow) {
+        return {
+            ...baseFields,
+            // Param fields are NULL for Value
+            paramId: null,
+            description: null,
+            uom: null,
+            // Operation and standardMh are used
+            operation: componentRow.operation,
+            standardMh: componentRow.standardMh,
+            conditionType: 'Value',
+            ifChecked: false,
+            // IF fields not used
+            leftType: null,
+            leftValue: null,
+            ifCondition: null,
+            rightType: null,
+            rightValue: null,
             // LOOKUP fields not used
             lookupParamType: null,
             lookupParamValue: null,
